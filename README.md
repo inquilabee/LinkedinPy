@@ -4,8 +4,7 @@ Python script to automate some usual tasks performed on social-networking site L
 
 Usage:
 
-python linkedin.py --email <email> --password <password> --browser <browser> --driver <driver_path> --headless 1 
-
+python linkedin.py --email email --password password --browser browser --driver driver_path --headless 1
 
 TODO:
 
