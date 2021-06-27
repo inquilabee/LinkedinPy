@@ -9,6 +9,9 @@ mypy-extensions==0.4.3
 nodeenv==1.6.0
 pathspec==0.8.1
 pre-commit==2.13.0
+python-crontab==2.5.1
+python-dateutil==2.8.1
+python-dotenv==0.18.0
 PyYAML==5.4.1
 regex==2021.4.4
 selenium==3.141.0
