@@ -241,6 +241,7 @@ class LinkedIn(AbstractBaseLinkedin):
         user_connect_button_text = "Connect"
         user_connection_card_class_name = "discover-entity-card"
         user_card_mutual_connection_class_name = "member-insights"
+        scroll_times_on_recommendation_page = 20
 
         def mutual_connections(user_card):
             try:
@@ -254,6 +255,9 @@ class LinkedIn(AbstractBaseLinkedin):
                 return -1
 
         networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
+
+        networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
+
         all_cards = networking_home_tab.find_element(
             by=By.CLASS_NAME, value=user_connection_card_class_name, multiple=True
         )
