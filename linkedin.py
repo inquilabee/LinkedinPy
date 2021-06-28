@@ -393,14 +393,15 @@ class LinkedIn(AbstractBaseLinkedin):
             f"{settings.LINKEDIN_NOT_PREFERRED_USER or ''} "
         )
 
-        cron = CronTab(user=settings.LINKEDIN_CRON_USER, tab=f"0 21 * * 1,3,5 {command}")
+        cron = CronTab(user=settings.LINKEDIN_CRON_USER)
 
-        print(cron)
+        even_day_job = cron.new(command=command, comment="LinkedInJob")
+        even_day_job.hour.on(21)
+        even_day_job.dow.on(0, 2, 4, 6)
 
-        cron.write()
-
-        cron = CronTab(user=settings.LINKEDIN_CRON_USER, tab=f"0 20 * * 0,2,4,6 {command}")
-        print(cron)
+        odd_day_job = cron.new(command=command, comment="LinkedInJob")
+        odd_day_job.hour.on(22)
+        odd_day_job.dow.on(1, 3, 5)
 
         cron.write()
 
