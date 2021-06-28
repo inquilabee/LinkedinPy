@@ -461,6 +461,9 @@ def get_linkedin_settings(command_args=None) -> LinkedInSettings:
     settings.LINKEDIN_BROWSER_CRON = int(settings.LINKEDIN_BROWSER_CRON)
     settings.LINKEDIN_BROWSER_HEADLESS = int(settings.LINKEDIN_BROWSER_HEADLESS)
 
+    settings.LINKEDIN_PREFERRED_USER = Path(settings.LINKEDIN_PREFERRED_USER).absolute()
+    settings.LINKEDIN_NOT_PREFERRED_USER = Path(settings.LINKEDIN_NOT_PREFERRED_USER).absolute()
+
     return settings
 
 
