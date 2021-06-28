@@ -83,6 +83,8 @@ class AbstractBaseLinkedin(ABC):
 
     WEEKLY_MAX_INVITATION: int = 100
 
+    CRON_JOB_COMMENT = "LinkedInJob"
+
     def __init__(self, username, password, browser, driver_path, headless):
         self.username = username
         self.password = password
@@ -143,6 +145,10 @@ class AbstractBaseLinkedin(ABC):
 
     @abstractmethod
     def set_smart_cron(self, passed_arguments):
+        pass
+
+    @abstractmethod
+    def remove_cron_jobs(self):
         pass
 
 
@@ -395,14 +401,19 @@ class LinkedIn(AbstractBaseLinkedin):
 
         cron = CronTab(user=settings.LINKEDIN_CRON_USER)
 
-        even_day_job = cron.new(command=command, comment="LinkedInJob")
+        even_day_job = cron.new(command=command, comment=self.CRON_JOB_COMMENT)
         even_day_job.hour.on(21)
         even_day_job.dow.on(0, 2, 4, 6)
 
-        odd_day_job = cron.new(command=command, comment="LinkedInJob")
+        odd_day_job = cron.new(command=command, comment=self.CRON_JOB_COMMENT)
         odd_day_job.hour.on(22)
         odd_day_job.dow.on(1, 3, 5)
 
+        cron.write()
+
+    def remove_cron_jobs(self):
+        cron = CronTab(user=settings.LINKEDIN_CRON_USER)
+        cron.remove_all(comment=self.CRON_JOB_COMMENT)
         cron.write()
 
 
@@ -422,8 +433,8 @@ def get_linkedin_settings(command_args=None) -> LinkedInSettings:
 
             setattr(settings, arg_name, value)
 
-    settings.LINKEDIN_BROWSER_CRON = int(settings.LINKEDIN_BROWSER_CRON)
-    settings.LINKEDIN_BROWSER_HEADLESS = int(settings.LINKEDIN_BROWSER_HEADLESS)
+    settings.LINKEDIN_BROWSER_CRON = bool(settings.LINKEDIN_BROWSER_CRON)
+    settings.LINKEDIN_BROWSER_HEADLESS = bool(settings.LINKEDIN_BROWSER_HEADLESS)
 
     return settings
 
@@ -485,6 +496,13 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--rmcron",
+        action="store_true",
+        default=False,
+        help="Whether to remove existing cron",
+    )
+
+    parser.add_argument(
         "--preferred",
         type=str,
         default=os.getenv(LinkedInSettingsName.LINKEDIN_PREFERRED_USER, ""),
@@ -520,6 +538,10 @@ if __name__ == "__main__":
         driver_path=settings.LINKEDIN_BROWSER_DRIVER,
         headless=settings.LINKEDIN_BROWSER_HEADLESS,
     ) as ln:
+
+        if args.rmcron:
+            ln.remove_cron_jobs()
+
         if settings.LINKEDIN_BROWSER_CRON:
             ln.set_smart_cron(settings)
         else:

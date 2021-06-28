@@ -18,12 +18,14 @@ encounter any issue while running the scripts.
       --headless            Whether to run headless
       --cron                Whether to create a cron job
       --cronuser CRONUSER   Run cron jobs as this user
+      --rmcron              Whether to remove existing cron
       --preferred PREFERRED
                             Path to file containing preferred users characteristics
       --notpreferred NOTPREFERRED
                             Path to file containing characteristics of not preferred users
 
-Start with following commands. Use `example.env` file as reference while setting values.
+Start with following commands. Use `example.env` file as reference while setting values. Use sudo in case you are
+setting crons.
 
     python linkedin.py --env .env
     python linkedin.py --email abc@gmail.com --password $3cRET --browser Chrome --driver /path/to/chromedriver --cronuser john --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
