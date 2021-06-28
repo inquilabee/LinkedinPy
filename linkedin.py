@@ -188,7 +188,19 @@ class LinkedIn(AbstractBaseLinkedin):
         return 0
 
     def match(self, user_card, preferences: list):
-        return True
+        """A simple substring search to match
+
+        TODO: Improve matching algorithm
+        """
+
+        try:
+            for pref in preferences:
+                if user_card.text and (pref in user_card.text or user_card.text in pref):
+                    return True
+        except:  # noqa
+            pass
+
+        return False
 
     def login(self):
         if not self._user_logged_in:
@@ -231,12 +243,15 @@ class LinkedIn(AbstractBaseLinkedin):
         user_card_mutual_connection_class_name = "member-insights"
 
         def mutual_connections(user_card):
-            user_insights = user_card.find_element(by=By.CLASS_NAME, value=user_card_mutual_connection_class_name)
+            try:
+                user_insights = user_card.find_element(by=By.CLASS_NAME, value=user_card_mutual_connection_class_name)
 
-            mutual_connection = int(
-                "".join([character for character in user_insights.text if character in string.digits]) or "0"
-            )
-            return mutual_connection
+                mutual_connection = int(
+                    "".join([character for character in user_insights.text if character in string.digits]) or "0"
+                )
+                return mutual_connection
+            except:  # noqa
+                return -1
 
         networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
         all_cards = networking_home_tab.find_element(
@@ -251,14 +266,18 @@ class LinkedIn(AbstractBaseLinkedin):
 
         # all_cards = random.sample(all_cards, min(max_invitation, len(all_cards)))
 
+        invitations = 0
+
+        # print("Possible requests ", len(all_cards))
+
         for user_card in all_cards:
 
             if preferred_users and not self.match(user_card, preferred_users):
-                """User does not match or fulfil specified criteria"""
+                # print("""User does not match or fulfil specified criteria""", user_card.text, preferred_users)
                 continue
 
             if not_preferred_users and self.match(user_card, not_preferred_users):
-                """User matched with not preferred criterias"""
+                # print("""User matched with not preferred criteria""", user_card.text, not_preferred_users)
                 continue
 
             if view_profile:
@@ -269,6 +288,12 @@ class LinkedIn(AbstractBaseLinkedin):
 
             connect_button = user_card.find_element(by=By.XPATH, value=f".//*[text()='{user_connect_button_text}']")
             networking_home_tab.click(connect_button)
+            invitations = invitations + 1
+
+            # print(f"Sent invitation to {user_card.text}")
+
+            if invitations > max_invitation:
+                break
 
     def accept_invitations(self):
         user_accept_button_class_name = "invite-accept-btn"
@@ -363,7 +388,7 @@ class LinkedIn(AbstractBaseLinkedin):
         users_not_preferred = [line.strip() for line in users_not_preferred if line.strip()]
 
         self.login()
-        # self.remove_sent_invitations(older_than_days=14)
+        self.remove_sent_invitations(older_than_days=14)
         self.send_invitations(
             max_invitation=max(self.WEEKLY_MAX_INVITATION - self.invitations_sent_last_week, 0),
             min_mutual=100,
@@ -433,8 +458,8 @@ def get_linkedin_settings(command_args=None) -> LinkedInSettings:
 
             setattr(settings, arg_name, value)
 
-    settings.LINKEDIN_BROWSER_CRON = bool(settings.LINKEDIN_BROWSER_CRON)
-    settings.LINKEDIN_BROWSER_HEADLESS = bool(settings.LINKEDIN_BROWSER_HEADLESS)
+    settings.LINKEDIN_BROWSER_CRON = int(settings.LINKEDIN_BROWSER_CRON)
+    settings.LINKEDIN_BROWSER_HEADLESS = int(settings.LINKEDIN_BROWSER_HEADLESS)
 
     return settings
 
@@ -520,6 +545,8 @@ if __name__ == "__main__":
 
     settings = get_linkedin_settings(command_args=args)
 
+    # print(settings)
+
     if not (
         settings.LINKEDIN_USER
         and settings.LINKEDIN_PASSWORD
@@ -536,7 +563,7 @@ if __name__ == "__main__":
         password=settings.LINKEDIN_PASSWORD,
         browser=settings.LINKEDIN_BROWSER,
         driver_path=settings.LINKEDIN_BROWSER_DRIVER,
-        headless=settings.LINKEDIN_BROWSER_HEADLESS,
+        headless=bool(settings.LINKEDIN_BROWSER_HEADLESS),
     ) as ln:
 
         if args.rmcron:
