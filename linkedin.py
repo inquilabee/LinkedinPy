@@ -268,11 +268,7 @@ class LinkedIn(AbstractBaseLinkedin):
             if user_connect_button_text in card.text and min_mutual < mutual_connections(card) < max_mutual
         ]
 
-        # all_cards = random.sample(all_cards, min(max_invitation, len(all_cards)))
-
         invitations = 0
-
-        # print("Possible requests ", len(all_cards))
 
         for user_card in all_cards:
 
@@ -294,10 +290,10 @@ class LinkedIn(AbstractBaseLinkedin):
             networking_home_tab.click(connect_button)
             invitations = invitations + 1
 
-            # print(f"Sent invitation to {user_card.text}")
-
             if invitations > max_invitation:
                 break
+
+        return invitations
 
     def accept_invitations(self):
         user_accept_button_class_name = "invite-accept-btn"
@@ -317,60 +313,124 @@ class LinkedIn(AbstractBaseLinkedin):
         withdraw_invitation_button_modal_text = "Withdraw invitation"
         withdraw_invitation_button_modal_confirm_text = "Withdraw"
         withdraw_invitation_button_modal_cancel_text = "Cancel"
-
         sent_invitation_class_name = "invitation-card"
+        sent_invitation_pagination_class_name = "mn-invitation-pagination"
+        pagination_next_button_test = "Next"
+        pagination_disabled_next_button_class_name = "artdeco-button--disabled"
 
         sent_invitation_tab = self.browser.open(self.NETWORK_SENT_INVITATIONS_PAGE)
 
-        sent_invitation_tab.infinite_scroll()
-
-        all_sent_invitations = sent_invitation_tab.find_element(
-            by=By.CLASS_NAME, value=sent_invitation_class_name, multiple=True
-        )
-
         number_of_removed_invitation = 0
 
-        while all_sent_invitations and number_of_removed_invitation < max_remove:
-            sent_invitation = all_sent_invitations.pop()
+        while True:
+            # paginate until you can
+            # break when you can't.
 
-            if self.invitation_sent_days_ago(invitation=sent_invitation) >= older_than_days:
-                withdraw_btn = sent_invitation.find_element(
-                    by=By.XPATH, value=f".//*[text()='{withdraw_invitation_button_text}']"
-                )
-                sent_invitation_tab.click(withdraw_btn)
+            sent_invitation_tab.infinite_scroll()
 
-                confirm_withdrawal_pop_up = sent_invitation_tab.find_element(
-                    by=By.XPATH, value=f"//*[text()='{withdraw_invitation_button_modal_text}']"
-                )
+            all_sent_invitations = sent_invitation_tab.find_element(
+                by=By.CLASS_NAME, value=sent_invitation_class_name, multiple=True
+            )
 
-                while withdraw_invitation_button_modal_cancel_text not in confirm_withdrawal_pop_up.text:
-                    confirm_withdrawal_pop_up = confirm_withdrawal_pop_up.find_element(by=By.XPATH, value="..")
+            while all_sent_invitations and number_of_removed_invitation < max_remove:
+                sent_invitation = all_sent_invitations.pop()
 
-                withdrawal_confirm_modal_button = confirm_withdrawal_pop_up.find_element(
-                    by=By.XPATH, value=f".//*[text()='{withdraw_invitation_button_modal_confirm_text}']"
-                )
+                if self.invitation_sent_days_ago(invitation=sent_invitation) >= older_than_days:
+                    withdraw_btn = sent_invitation.find_element(
+                        by=By.XPATH, value=f".//*[text()='{withdraw_invitation_button_text}']"
+                    )
+                    sent_invitation_tab.click(withdraw_btn)
 
-                sent_invitation_tab.click(withdrawal_confirm_modal_button)
+                    confirm_withdrawal_pop_up = sent_invitation_tab.find_element(
+                        by=By.XPATH, value=f"//*[text()='{withdraw_invitation_button_modal_text}']"
+                    )
 
-                sent_invitation_tab.wait_until_staleness(withdrawal_confirm_modal_button)
-                sent_invitation_tab.wait_until_staleness(confirm_withdrawal_pop_up)
-                sent_invitation_tab.wait_until_staleness(withdraw_btn)
+                    while withdraw_invitation_button_modal_cancel_text not in confirm_withdrawal_pop_up.text:
+                        confirm_withdrawal_pop_up = confirm_withdrawal_pop_up.find_element(by=By.XPATH, value="..")
 
-                number_of_removed_invitation = number_of_removed_invitation + 1
+                    withdrawal_confirm_modal_button = confirm_withdrawal_pop_up.find_element(
+                        by=By.XPATH, value=f".//*[text()='{withdraw_invitation_button_modal_confirm_text}']"
+                    )
+
+                    sent_invitation_tab.click(withdrawal_confirm_modal_button)
+
+                    sent_invitation_tab.wait_until_staleness(withdrawal_confirm_modal_button)
+                    sent_invitation_tab.wait_until_staleness(confirm_withdrawal_pop_up)
+                    sent_invitation_tab.wait_until_staleness(withdraw_btn)
+
+                    number_of_removed_invitation = number_of_removed_invitation + 1
+
+            pagination = sent_invitation_tab.find_element(
+                by=By.CLASS_NAME, value=sent_invitation_pagination_class_name, multiple=False
+            )
+
+            if not pagination:
+                break
+
+            next_button = pagination.find_element(by=By.XPATH, value=f".//*[text()='{pagination_next_button_test}']")
+
+            next_button = next_button.find_element(by=By.XPATH, value="..")
+
+            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attributes(next_button, "class"):
+                break
+
+            sent_invitation_tab.click(next_button)
+
+            time.sleep(5)
+
+            sent_invitation_tab.wait_for_presence_and_visibility(by=By.TAG_NAME, key="body", wait=10)
+
+        return number_of_removed_invitation
 
     @property
     def invitations_sent_last_week(self) -> int:
         sent_invitation_class_name = "invitation-card"
+        sent_invitation_pagination_class_name = "mn-invitation-pagination"
+        pagination_next_button_test = "Next"
+        pagination_disabled_next_button_class_name = "artdeco-button--disabled"
 
         sent_invitation_tab = self.browser.open(self.NETWORK_SENT_INVITATIONS_PAGE)
 
-        sent_invitation_tab.infinite_scroll()
+        total_sent_invitations = 0
 
-        all_sent_invitations = sent_invitation_tab.find_element(
-            by=By.CLASS_NAME, value=sent_invitation_class_name, multiple=True
-        )
+        while True:
+            try:
+                sent_invitation_tab.infinite_scroll()
 
-        return sum([self.invitation_sent_days_ago(invitation) <= 7 for invitation in all_sent_invitations])
+                pagination = sent_invitation_tab.find_element(
+                    by=By.CLASS_NAME, value=sent_invitation_pagination_class_name, multiple=False
+                )
+
+                all_sent_invitations = sent_invitation_tab.find_element(
+                    by=By.CLASS_NAME, value=sent_invitation_class_name, multiple=True
+                )
+
+                total_sent_invitations = total_sent_invitations + sum(
+                    [0 <= self.invitation_sent_days_ago(invitation) <= 7 for invitation in all_sent_invitations]
+                )
+
+                # print("Total sent invitation", total_sent_invitations)
+
+                next_button = pagination.find_element(
+                    by=By.XPATH, value=f".//*[text()='{pagination_next_button_test}']"
+                )
+
+                next_button = next_button.find_element(by=By.XPATH, value="..")
+
+                if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attributes(
+                    next_button, "class"
+                ):
+                    break
+
+                sent_invitation_tab.click(next_button)
+
+                time.sleep(5)
+
+                sent_invitation_tab.wait_for_presence_and_visibility(by=By.TAG_NAME, key="body", wait=10)
+            except Exception as e:  # noqa
+                break
+
+        return total_sent_invitations
 
     def view_profile(self, username, wait=5):
         user_profile_link = self.USER_PROFILE_PAGE.format(username=username)
@@ -465,8 +525,8 @@ def get_linkedin_settings(command_args=None) -> LinkedInSettings:
     settings.LINKEDIN_BROWSER_CRON = int(settings.LINKEDIN_BROWSER_CRON)
     settings.LINKEDIN_BROWSER_HEADLESS = int(settings.LINKEDIN_BROWSER_HEADLESS)
 
-    settings.LINKEDIN_PREFERRED_USER = Path(settings.LINKEDIN_PREFERRED_USER).absolute()
-    settings.LINKEDIN_NOT_PREFERRED_USER = Path(settings.LINKEDIN_NOT_PREFERRED_USER).absolute()
+    settings.LINKEDIN_PREFERRED_USER = str(Path(settings.LINKEDIN_PREFERRED_USER).absolute())
+    settings.LINKEDIN_NOT_PREFERRED_USER = str(Path(settings.LINKEDIN_NOT_PREFERRED_USER).absolute())
 
     return settings
 
@@ -552,7 +612,7 @@ if __name__ == "__main__":
 
     settings = get_linkedin_settings(command_args=args)
 
-    # print(settings)
+    # print("SETTINGS: ", settings, "\n" * 2)
 
     if not (
         settings.LINKEDIN_USER
