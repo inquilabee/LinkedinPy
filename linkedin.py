@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import random
 import string
 import subprocess
 import time
@@ -8,6 +9,7 @@ from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
+from typing import List, Optional
 
 from crontab import CronTab
 from dotenv import load_dotenv
@@ -185,7 +187,7 @@ class LinkedIn(AbstractBaseLinkedin):
         elif "year" in unit:
             return 365 * num
 
-        return 0
+        return -1
 
     def match(self, user_card, preferences: list):
         """A simple substring search to match
@@ -201,6 +203,34 @@ class LinkedIn(AbstractBaseLinkedin):
             pass
 
         return False
+
+    def mutual_connections(self, user_card):
+        user_card_mutual_connection_class_name = "member-insights"
+
+        try:
+            user_insights = user_card.find_element(by=By.CLASS_NAME, value=user_card_mutual_connection_class_name)
+
+            mutual_connection = int(
+                "".join([character for character in user_insights.text if character in string.digits]) or "0"
+            )
+            return mutual_connection
+        except:  # noqa
+            return -1
+
+    def user_eligible(
+        self, user_crd, min_mutual, max_mutual, preferred_users=Optional[List], not_preferred_users=Optional[List]
+    ):
+        status = False
+
+        if preferred_users and self.match(user_crd, preferred_users):
+            # print("""User does not match or fulfil specified criteria""", user_card.text, preferred_users)
+            status = True
+
+        if not status and not_preferred_users and self.match(user_crd, not_preferred_users):
+            # print("""User matched with not preferred criteria""", user_card.text, not_preferred_users)
+            status = False
+
+        return status and min_mutual < self.mutual_connections(user_crd) < max_mutual
 
     def login(self):
         if not self._user_logged_in:
@@ -239,46 +269,45 @@ class LinkedIn(AbstractBaseLinkedin):
         not_preferred_users: list = None,
     ):
         user_connect_button_text = "Connect"
-        user_connection_card_class_name = "discover-entity-card"
-        user_card_mutual_connection_class_name = "member-insights"
+        user_connection_card_class_names = [
+            "discover-entity-card",
+            "discover-entity-type-card",
+        ]
+
         scroll_times_on_recommendation_page = 20
-
-        def mutual_connections(user_card):
-            try:
-                user_insights = user_card.find_element(by=By.CLASS_NAME, value=user_card_mutual_connection_class_name)
-
-                mutual_connection = int(
-                    "".join([character for character in user_insights.text if character in string.digits]) or "0"
-                )
-                return mutual_connection
-            except:  # noqa
-                return -1
+        invitations = 0
 
         networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
 
         networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
 
-        all_cards = networking_home_tab.find_element(
-            by=By.CLASS_NAME, value=user_connection_card_class_name, multiple=True
-        )
+        for user_connection_card_class_name in user_connection_card_class_names:
+            if all_cards := networking_home_tab.find_element(
+                by=By.CLASS_NAME, value=user_connection_card_class_name, multiple=True
+            ):
+                break
+        else:
+            return invitations
 
-        all_cards = [
-            card
-            for card in all_cards
-            if user_connect_button_text in card.text and min_mutual < mutual_connections(card) < max_mutual
+        valid_cards = [
+            (card, self.user_eligible(card, min_mutual, max_mutual, preferred_users, not_preferred_users))
+            for card in all_cards[:200]
+            if user_connect_button_text in card.text
         ]
 
-        invitations = 0
+        eligible_users = [user_card for user_card, is_user_eligible in valid_cards if is_user_eligible]
 
-        for user_card in all_cards:
+        ineligible_users = [
+            user_card
+            for user_card, is_user_eligible in valid_cards
+            if not is_user_eligible and min_mutual <= self.mutual_connections(user_card) <= max_mutual
+        ]
 
-            if preferred_users and not self.match(user_card, preferred_users):
-                # print("""User does not match or fulfil specified criteria""", user_card.text, preferred_users)
-                continue
+        random.shuffle(ineligible_users)
 
-            if not_preferred_users and self.match(user_card, not_preferred_users):
-                # print("""User matched with not preferred criteria""", user_card.text, not_preferred_users)
-                continue
+        user_cards = eligible_users + ineligible_users
+
+        for user_card in user_cards:
 
             if view_profile:
                 link = user_card.find_element_by_tag_name("a")
@@ -286,9 +315,13 @@ class LinkedIn(AbstractBaseLinkedin):
                 self.browser.open(user_profile_link)  # user_profile_tab
                 networking_home_tab.switch()
 
-            connect_button = user_card.find_element(by=By.XPATH, value=f".//*[text()='{user_connect_button_text}']")
-            networking_home_tab.click(connect_button)
-            invitations = invitations + 1
+            try:
+                connect_button = user_card.find_element(by=By.XPATH, value=f".//*[text()='{user_connect_button_text}']")
+                networking_home_tab.click(connect_button)
+                invitations = invitations + 1
+            except Exception as e:  # noqa
+                """Sometimes there is an exception when a user card is available multiple times on a page."""
+                pass
 
             if invitations > max_invitation:
                 break
@@ -453,8 +486,10 @@ class LinkedIn(AbstractBaseLinkedin):
 
         self.login()
         self.remove_sent_invitations(older_than_days=14)
+        last_week_invitation_count = self.invitations_sent_last_week
+
         self.send_invitations(
-            max_invitation=max(self.WEEKLY_MAX_INVITATION - self.invitations_sent_last_week, 0),
+            max_invitation=max(self.WEEKLY_MAX_INVITATION - last_week_invitation_count, 0),
             min_mutual=100,
             max_mutual=400,
             preferred_users=users_preferred,
