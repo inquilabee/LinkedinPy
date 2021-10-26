@@ -1,6 +1,7 @@
 .idea/
 linkedin_old.py
 test.html
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

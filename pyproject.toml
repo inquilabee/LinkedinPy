@@ -1,16 +1,22 @@
 [tool.black]
-line-length = 120
+line-length = 100
+target-version = ['py36', "py37", "py38",]
+experimental_string_processing = true
 include = '\.pyi?$'
 exclude = '''
 /(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
+  \.toml
+  |\.sh
+  |\.git
+  |\.ini
+  |\.tox
+  |Dockerfile
+  |Jenkinfile
   | _build
-  | buck-out
-  | build
   | dist
 )/
 '''
+
+[tool.isort]
+profile = 'black'
+multi_line_output = 3

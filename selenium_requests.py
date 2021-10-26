@@ -40,7 +40,9 @@ class Session:
             driver_options.add_argument("--no-sandbox")
             driver_options.add_argument("no-default-browser-check")
 
-        driver = self.BROWSER_DRIVER_FUNCTION[self.browser](self.driver_path, options=driver_options)
+        driver = self.BROWSER_DRIVER_FUNCTION[self.browser](
+            self.driver_path, options=driver_options
+        )
         driver.implicitly_wait(self.implicit_wait)
         # driver.set_page_load_timeout(self.implicit_wait)
 
@@ -107,10 +109,9 @@ class Tab:
 
     def get_attributes(self, element, attr_name):
         attr_dict = self.driver.execute_script(
-            "var items = {}; "
-            "for (index = 0; index < arguments[0].attributes.length; ++index) "
-            "{ items[arguments[0].attributes[index].name] = arguments[0].attributes[index].value }; "
-            "return items;",
+            "var items = {}; for (index = 0; index < arguments[0].attributes.length; ++index) {"
+            " items[arguments[0].attributes[index].name] = arguments[0].attributes[index].value };"
+            " return items;",
             element,
         )
 
@@ -132,9 +133,12 @@ class Tab:
     def scroll(self, times=3, wait=1):
 
         for _ in range(times):
-            html = self.driver.find_element_by_tag_name("html")
-            html.send_keys(Keys.END)
-            time.sleep(wait)
+            self.scroll_to_bottom(wait=wait)
+
+    def scroll_to_bottom(self, wait=1):
+        html = self.driver.find_element_by_tag_name("html")
+        html.send_keys(Keys.END)
+        time.sleep(wait)
 
     def infinite_scroll(self, retries=5):
 
@@ -144,7 +148,9 @@ class Tab:
 
                 while True:
                     self.scroll()
-                    new_height = self.driver.execute_script("return document.documentElement.scrollHeight")
+                    new_height = self.driver.execute_script(
+                        "return document.documentElement.scrollHeight"
+                    )
 
                     if new_height == last_height:
                         break
@@ -244,15 +250,23 @@ class Browser:
         "FireFox": "FIREFOX_DRIVER_PATH",
     }
 
-    def __init__(self, name, driver_path=None, implicit_wait: int = 0, user_agent: str = "", headless=False):
+    def __init__(
+        self, name, driver_path=None, implicit_wait: int = 0, user_agent: str = "", headless=False
+    ):
         self.name = name
 
         self.implicit_wait = implicit_wait or self._get_attr_or_env("IMPLICIT_WAIT_TIME")
-        self.user_agent = user_agent or self._get_attr_or_env("SELENIUM_USER_AGENT", raise_exception=False)
+        self.user_agent = user_agent or self._get_attr_or_env(
+            "SELENIUM_USER_AGENT", raise_exception=False
+        )
         self.driver_path = driver_path or self.get_driver_path()
 
         self._session = Session(
-            name, driver_path, headless=headless, implicit_wait=self.implicit_wait, user_agent=self.user_agent
+            name,
+            driver_path,
+            headless=headless,
+            implicit_wait=self.implicit_wait,
+            user_agent=self.user_agent,
         )
         self.tabs = TabManager(self._session)
 

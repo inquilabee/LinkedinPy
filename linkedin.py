@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import argparse
 import logging
 import os
-import random
 import string
 import subprocess
 import time
 from abc import ABC, abstractmethod, abstractproperty
+from contextlib import suppress
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
@@ -21,10 +23,8 @@ from selenium_requests import Browser
 def ignore_exception(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        try:
+        with suppress():
             func(*args, **kwargs)
-        except Exception as e:  # noqa
-            pass
 
     return wrapper
 
@@ -92,7 +92,9 @@ class AbstractBaseLinkedin(ABC):
         self.password = password
         self.browser_name = browser
         self._user_logged_in: bool = False
-        self.browser = Browser(name=browser, implicit_wait=10, driver_path=driver_path, headless=headless)
+        self.browser = Browser(
+            name=browser, implicit_wait=10, driver_path=driver_path, headless=headless
+        )
         self.logger = logging.getLogger("LinkedIn")
 
     def __enter__(self):
@@ -150,7 +152,7 @@ class AbstractBaseLinkedin(ABC):
         pass
 
     @abstractmethod
-    def remove_cron_jobs(self):
+    def remove_cron_jobs(self, settings):
         pass
 
 
@@ -164,14 +166,20 @@ class LinkedIn(AbstractBaseLinkedin):
 
     def __init__(self, username, password, driver_path, browser="Chrome", headless=False):
         super().__init__(
-            username=username, password=password, browser=browser, driver_path=driver_path, headless=headless
+            username=username,
+            password=password,
+            browser=browser,
+            driver_path=driver_path,
+            headless=headless,
         )
 
     @staticmethod
     def invitation_sent_days_ago(invitation):
         mutual_connection_button_class_name = "time-badge"
 
-        sent_ago = invitation.find_element(by=By.CLASS_NAME, value=mutual_connection_button_class_name).text
+        sent_ago = invitation.find_element(
+            by=By.CLASS_NAME, value=mutual_connection_button_class_name
+        ).text
         num, unit, _ = sent_ago.split()
 
         num = int(num)
@@ -195,42 +203,56 @@ class LinkedIn(AbstractBaseLinkedin):
         TODO: Improve matching algorithm
         """
 
-        try:
+        if not preferences:
+            return True
+
+        with suppress(Exception):
             for pref in preferences:
                 if user_card.text and (pref in user_card.text or user_card.text in pref):
                     return True
-        except:  # noqa
-            pass
 
         return False
 
-    def mutual_connections(self, user_card):
+    @staticmethod
+    def mutual_connections(user_card):
         user_card_mutual_connection_class_name = "member-insights"
 
-        try:
-            user_insights = user_card.find_element(by=By.CLASS_NAME, value=user_card_mutual_connection_class_name)
+        with suppress(Exception):
+            user_insights = user_card.find_element(
+                by=By.CLASS_NAME, value=user_card_mutual_connection_class_name
+            )
 
             mutual_connection = int(
-                "".join([character for character in user_insights.text if character in string.digits]) or "0"
+                "".join(
+                    [character for character in user_insights.text if character in string.digits]
+                )
+                or "0"
             )
             return mutual_connection
-        except:  # noqa
-            return -1
+
+        return -1
 
     def user_eligible(
-        self, user_crd, min_mutual, max_mutual, preferred_users=Optional[List], not_preferred_users=Optional[List]
+        self,
+        user_crd,
+        min_mutual,
+        max_mutual,
+        preferred_users=Optional[List],
+        not_preferred_users=Optional[List],
     ):
-        status = False
-
         if preferred_users and self.match(user_crd, preferred_users):
             # print("""User does not match or fulfil specified criteria""", user_card.text, preferred_users)
-            status = True
+            # status = True
+            return min_mutual < self.mutual_connections(user_crd) < max_mutual
 
-        if not status and not_preferred_users and self.match(user_crd, not_preferred_users):
+        if not_preferred_users and self.match(user_crd, not_preferred_users):
             # print("""User matched with not preferred criteria""", user_card.text, not_preferred_users)
-            status = False
+            return False
 
-        return status and min_mutual < self.mutual_connections(user_crd) < max_mutual
+        # if both the lists are empty,
+        # or did not match with any of them, assume no preferences have been set and
+        # decide using mutual friend criteria.
+        return min_mutual < self.mutual_connections(user_crd) < max_mutual
 
     def login(self):
         if not self._user_logged_in:
@@ -238,8 +260,12 @@ class LinkedIn(AbstractBaseLinkedin):
             login_tab = self.browser.open(self.LOGIN_PAGE)
 
             try:
-                username_input = login_tab.wait_for_presence_and_visibility(by=By.ID, key="username", wait=10)
-                password_input = login_tab.wait_for_presence_and_visibility(by=By.ID, key="password", wait=10)
+                username_input = login_tab.wait_for_presence_and_visibility(
+                    by=By.ID, key="username", wait=10
+                )
+                password_input = login_tab.wait_for_presence_and_visibility(
+                    by=By.ID, key="password", wait=10
+                )
                 submit_button = login_tab.wait_for_presence_and_visibility(
                     by=By.CLASS_NAME, key="btn__primary--large", wait=10
                 )
@@ -268,6 +294,9 @@ class LinkedIn(AbstractBaseLinkedin):
         preferred_users: list = None,
         not_preferred_users: list = None,
     ):
+        if not max_invitation > 0:
+            return 0
+
         user_connect_button_text = "Connect"
         user_connection_card_class_names = [
             "discover-entity-card",
@@ -276,55 +305,43 @@ class LinkedIn(AbstractBaseLinkedin):
 
         scroll_times_on_recommendation_page = 20
         invitations = 0
+        retry_times = 5
 
-        networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
+        for _ in range(retry_times):
+            networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
 
-        networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
+            networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
 
-        for user_connection_card_class_name in user_connection_card_class_names:
-            if all_cards := networking_home_tab.find_element(
-                by=By.CLASS_NAME, value=user_connection_card_class_name, multiple=True
-            ):
-                break
-        else:
-            return invitations
+            for user_connection_card_class_name in user_connection_card_class_names:
+                if all_cards := networking_home_tab.find_element(
+                    by=By.CLASS_NAME, value=user_connection_card_class_name, multiple=True
+                ):
+                    break
+            else:
+                return invitations
 
-        valid_cards = [
-            (card, self.user_eligible(card, min_mutual, max_mutual, preferred_users, not_preferred_users))
-            for card in all_cards[:200]
-            if user_connect_button_text in card.text
-        ]
+            for card in all_cards:
+                if user_connect_button_text in card.text and self.user_eligible(
+                    card, min_mutual, max_mutual, preferred_users, not_preferred_users
+                ):
+                    if view_profile:
+                        link = card.find_element_by_tag_name("a")
+                        user_profile_link = link.get_attribute("href")
+                        self.browser.open(user_profile_link)  # user_profile_tab
+                        networking_home_tab.switch()
 
-        eligible_users = [user_card for user_card, is_user_eligible in valid_cards if is_user_eligible]
+                    try:
+                        connect_button = card.find_element(
+                            by=By.XPATH, value=f".//*[text()='{user_connect_button_text}']"
+                        )
+                        networking_home_tab.click(connect_button)
+                        invitations = invitations + 1
+                    except Exception as e:  # noqa
+                        """Sometimes there is an exception when a user card is available multiple times on a page."""
+                        pass
 
-        ineligible_users = [
-            user_card
-            for user_card, is_user_eligible in valid_cards
-            if not is_user_eligible and min_mutual <= self.mutual_connections(user_card) <= max_mutual
-        ]
-
-        random.shuffle(ineligible_users)
-
-        user_cards = eligible_users + ineligible_users
-
-        for user_card in user_cards:
-
-            if view_profile:
-                link = user_card.find_element_by_tag_name("a")
-                user_profile_link = link.get_attribute("href")
-                self.browser.open(user_profile_link)  # user_profile_tab
-                networking_home_tab.switch()
-
-            try:
-                connect_button = user_card.find_element(by=By.XPATH, value=f".//*[text()='{user_connect_button_text}']")
-                networking_home_tab.click(connect_button)
-                invitations = invitations + 1
-            except Exception as e:  # noqa
-                """Sometimes there is an exception when a user card is available multiple times on a page."""
-                pass
-
-            if invitations > max_invitation:
-                break
+                    if invitations > max_invitation:
+                        break
 
         return invitations
 
@@ -378,11 +395,17 @@ class LinkedIn(AbstractBaseLinkedin):
                         by=By.XPATH, value=f"//*[text()='{withdraw_invitation_button_modal_text}']"
                     )
 
-                    while withdraw_invitation_button_modal_cancel_text not in confirm_withdrawal_pop_up.text:
-                        confirm_withdrawal_pop_up = confirm_withdrawal_pop_up.find_element(by=By.XPATH, value="..")
+                    while (
+                        withdraw_invitation_button_modal_cancel_text
+                        not in confirm_withdrawal_pop_up.text
+                    ):
+                        confirm_withdrawal_pop_up = confirm_withdrawal_pop_up.find_element(
+                            by=By.XPATH, value=".."
+                        )
 
                     withdrawal_confirm_modal_button = confirm_withdrawal_pop_up.find_element(
-                        by=By.XPATH, value=f".//*[text()='{withdraw_invitation_button_modal_confirm_text}']"
+                        by=By.XPATH,
+                        value=f".//*[text()='{withdraw_invitation_button_modal_confirm_text}']",
                     )
 
                     sent_invitation_tab.click(withdrawal_confirm_modal_button)
@@ -400,18 +423,24 @@ class LinkedIn(AbstractBaseLinkedin):
             if not pagination:
                 break
 
-            next_button = pagination.find_element(by=By.XPATH, value=f".//*[text()='{pagination_next_button_test}']")
+            next_button = pagination.find_element(
+                by=By.XPATH, value=f".//*[text()='{pagination_next_button_test}']"
+            )
 
             next_button = next_button.find_element(by=By.XPATH, value="..")
 
-            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attributes(next_button, "class"):
+            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attributes(
+                next_button, "class"
+            ):
                 break
 
             sent_invitation_tab.click(next_button)
 
             time.sleep(5)
 
-            sent_invitation_tab.wait_for_presence_and_visibility(by=By.TAG_NAME, key="body", wait=10)
+            sent_invitation_tab.wait_for_presence_and_visibility(
+                by=By.TAG_NAME, key="body", wait=10
+            )
 
         return number_of_removed_invitation
 
@@ -428,7 +457,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         while True:
             try:
-                sent_invitation_tab.infinite_scroll()
+                sent_invitation_tab.scroll_to_bottom()
 
                 pagination = sent_invitation_tab.find_element(
                     by=By.CLASS_NAME, value=sent_invitation_pagination_class_name, multiple=False
@@ -439,7 +468,10 @@ class LinkedIn(AbstractBaseLinkedin):
                 )
 
                 total_sent_invitations = total_sent_invitations + sum(
-                    [0 <= self.invitation_sent_days_ago(invitation) <= 7 for invitation in all_sent_invitations]
+                    [
+                        0 <= self.invitation_sent_days_ago(invitation) <= 7
+                        for invitation in all_sent_invitations
+                    ]
                 )
 
                 # print("Total sent invitation", total_sent_invitations)
@@ -450,8 +482,9 @@ class LinkedIn(AbstractBaseLinkedin):
 
                 next_button = next_button.find_element(by=By.XPATH, value="..")
 
-                if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attributes(
-                    next_button, "class"
+                if (
+                    pagination_disabled_next_button_class_name
+                    in sent_invitation_tab.get_attributes(next_button, "class")
                 ):
                     break
 
@@ -459,7 +492,9 @@ class LinkedIn(AbstractBaseLinkedin):
 
                 time.sleep(5)
 
-                sent_invitation_tab.wait_for_presence_and_visibility(by=By.TAG_NAME, key="body", wait=10)
+                sent_invitation_tab.wait_for_presence_and_visibility(
+                    by=By.TAG_NAME, key="body", wait=10
+                )
             except Exception as e:  # noqa
                 break
 
@@ -473,11 +508,19 @@ class LinkedIn(AbstractBaseLinkedin):
 
     def smart_follow_unfollow(self, users_preferred=None, users_not_preferred=None):
 
-        if users_preferred and not isinstance(users_preferred, list) and Path(users_preferred).exists():
+        if (
+            users_preferred
+            and not isinstance(users_preferred, list)
+            and Path(users_preferred).exists()
+        ):
             with open(users_preferred) as f:
                 users_preferred = f.readlines()
 
-        if users_not_preferred and not isinstance(users_not_preferred, list) and Path(users_not_preferred).exists():
+        if (
+            users_not_preferred
+            and not isinstance(users_not_preferred, list)
+            and Path(users_not_preferred).exists()
+        ):
             with open(users_not_preferred) as f:
                 users_not_preferred = f.readlines()
 
@@ -499,11 +542,16 @@ class LinkedIn(AbstractBaseLinkedin):
 
         self.accept_invitations()
 
-    def set_smart_cron(self, settings: LinkedInSettings):
+    def set_smart_cron(self, settings: LinkedInSettings | dict):
+
+        if isinstance(settings, dict):
+            settings = LinkedInSettings(**settings)
 
         python_path = [
             path.strip()
-            for path in subprocess.run("which python", shell=True, capture_output=True).stdout.decode().split("\n")
+            for path in subprocess.run("which python", shell=True, capture_output=True)
+            .stdout.decode()
+            .split("\n")
         ][0]
 
         current_file_path = os.path.abspath(__file__)
@@ -515,7 +563,7 @@ class LinkedIn(AbstractBaseLinkedin):
             f"--password {settings.LINKEDIN_PASSWORD} "
             f"--browser {settings.LINKEDIN_BROWSER} "
             f"--driver {settings.LINKEDIN_BROWSER_DRIVER} "
-            f"--headless "
+            "--headless "
             f"--cronuser {settings.LINKEDIN_CRON_USER} "
             f"{'--preferred' if settings.LINKEDIN_PREFERRED_USER else ''} "
             f"{settings.LINKEDIN_PREFERRED_USER or ''} "
@@ -535,13 +583,20 @@ class LinkedIn(AbstractBaseLinkedin):
 
         cron.write()
 
-    def remove_cron_jobs(self):
+    def remove_cron_jobs(self, settings: dict | LinkedInSettings):
+        """Remove cron jobs set by the module earlier with the comment specified by CRON_JOB_COMMENT var"""
+
+        if isinstance(settings, dict):
+            settings = LinkedInSettings(**settings)
+
         cron = CronTab(user=settings.LINKEDIN_CRON_USER)
         cron.remove_all(comment=self.CRON_JOB_COMMENT)
         cron.write()
 
 
 def get_linkedin_settings(command_args=None) -> LinkedInSettings:
+    """Get all settings or variables set by the user"""
+
     if env_file := getattr(command_args, LinkedInCommandArgs.LINKEDIN_ENV_FILE.strip("--"), None):
         if not Path(env_file).exists():
             raise Exception("Env file does not exist. Please pass a valid env file.")
@@ -561,7 +616,9 @@ def get_linkedin_settings(command_args=None) -> LinkedInSettings:
     settings.LINKEDIN_BROWSER_HEADLESS = int(settings.LINKEDIN_BROWSER_HEADLESS)
 
     settings.LINKEDIN_PREFERRED_USER = str(Path(settings.LINKEDIN_PREFERRED_USER).absolute())
-    settings.LINKEDIN_NOT_PREFERRED_USER = str(Path(settings.LINKEDIN_NOT_PREFERRED_USER).absolute())
+    settings.LINKEDIN_NOT_PREFERRED_USER = str(
+        Path(settings.LINKEDIN_NOT_PREFERRED_USER).absolute()
+    )
 
     return settings
 
@@ -577,7 +634,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--email", type=str, default=os.getenv(LinkedInSettingsName.LINKEDIN_USER, None), help="Email of linkedin user"
+        "--email",
+        type=str,
+        default=os.getenv(LinkedInSettingsName.LINKEDIN_USER, None),
+        help="Email of linkedin user",
     )
 
     parser.add_argument(

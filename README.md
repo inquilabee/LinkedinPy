@@ -2,12 +2,12 @@
 
 Python script to automate some usual tasks performed on social-networking site LinkedIn.
 
-The script has been tested on macOS and is expected to work on Linux environment as well. Raise an issue if you
+The script has been tested on macOS and is expected to work on Linux environment as well. Raise an issue/PR if you
 encounter any issue while running the scripts.
 
     usage: linkedin.py [-h] [--env ENV] [--email EMAIL] [--password PASSWORD] [--browser BROWSER] [--driver DRIVER] [--headless] [--cron] [--cronuser CRONUSER]
                        [--preferred PREFERRED] [--notpreferred NOTPREFERRED]
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       --env ENV             Linkedin environment file
