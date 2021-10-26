@@ -1,4 +1,4 @@
-from linkedin import LinkedIn
+from simplelinkedin import LinkedIn
 
 
 def run_script(settings):

@@ -22,11 +22,18 @@ profile = 'black'
 multi_line_output = 3
 
 [tool.poetry]
-name = "linkedin"
-version = "0.1.0"
+name = "simplelinkedin"
+version = "0.2.0"
 description = "Python package to work with LinkedIn"
 authors = ["Vishal Kumar Mishra <vishal.k.mishra2@gmail.com>"]
 license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/TheConfused/LinkedIn"
+repository = "https://github.com/TheConfused/LinkedIn"
+keywords = ["linkedin", "simplelinkedin", "selenium", "linkedin automation"]
+include = [
+    "LICENSE",
+]
 
 [tool.poetry.dependencies]
 python = "^3.9"
