@@ -4,6 +4,12 @@ Python script to automate some usual tasks performed on social-networking site L
 macOS and is expected to work on Linux environment as well. Raise an issue/PR if you encounter any issue while running
 the scripts.
 
+Before you proceed:
+
+- Download appropriate chrome driver from https://chromedriver.chromium.org/downloads for the version of the Chrome you
+  have installed in your machine.
+- Allow the script to execute the chrome-driver file downloaded above
+
 The best way to run and test the package for your needs is to use `sample_script.py` like below:
 
 ```python
@@ -36,9 +42,9 @@ with LinkedIn(
         max_invitation=max(ln.WEEKLY_MAX_INVITATION - ln.invitations_sent_last_week, 0),
         min_mutual=10,
         max_mutual=450,
-        preferred_users=["Quant"],
-        not_preferred_users=["Sportsman"],
-        view_profile=True,
+        preferred_users=["Quant"],  # file_path or list of features
+        not_preferred_users=["Sportsman"],  # file_path or list of features
+        view_profile=True,  # (recommended) view profile of users you sent connection request to
     )
 
     ln.accept_invitations()
@@ -82,7 +88,8 @@ Alternatively, you can go the command line way, like below.
       --notpreferred NOTPREFERRED
                             Path to file containing characteristics of not preferred users
 
-Start with following commands. Use `example.env` file as reference while setting values.
+Start with following commands. Use `example.env` file as reference while setting values. Prepend `sudo` if
+setting/un-setting cron in the commands below.
 
     python linkedin.py --env .env
     python linkedin.py --email abc@gmail.com --password $3cRET --browser Chrome --driver /path/to/chromedriver --cronuser john --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
