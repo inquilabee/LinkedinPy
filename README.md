@@ -1,9 +1,67 @@
 # LinkedIn
 
-Python script to automate some usual tasks performed on social-networking site LinkedIn.
+Python script to automate some usual tasks performed on social-networking site LinkedIn. The script has been tested on
+macOS and is expected to work on Linux environment as well. Raise an issue/PR if you encounter any issue while running
+the scripts.
 
-The script has been tested on macOS and is expected to work on Linux environment as well. Raise an issue/PR if you
-encounter any issue while running the scripts.
+The best way to run and test the package for your needs is to use `sample_script.py` like below:
+
+```python
+from linkedin import LinkedIn
+
+settings = {
+    "LINKEDIN_USER": "<username>",
+    "LINKEDIN_PASSWORD": "<password>",
+    "LINKEDIN_BROWSER": "Chrome",
+    "LINKEDIN_BROWSER_DRIVER": "/path/to/chromedriver",
+    "LINKEDIN_BROWSER_HEADLESS": 0,
+    "LINKEDIN_BROWSER_CRON": 0,
+    "LINKEDIN_CRON_USER": "<root_user>",
+    "LINKEDIN_PREFERRED_USER": "/path/to/preferred/user/text_doc.text",
+    "LINKEDIN_NOT_PREFERRED_USER": "/path/to/not/preferred/user/text_doc.text",
+}
+
+with LinkedIn(
+        username=settings.get("LINKEDIN_USER"),
+        password=settings.get("LINKEDIN_PASSWORD"),
+        browser=settings.get("LINKEDIN_BROWSER"),
+        driver_path=settings.get("LINKEDIN_BROWSER_DRIVER"),
+        headless=bool(settings.get("LINKEDIN_BROWSER_HEADLESS")),
+) as ln:
+    # do all the steps manually
+    ln.login()
+    ln.remove_sent_invitations(older_than_days=14)
+
+    ln.send_invitations(
+        max_invitation=max(ln.WEEKLY_MAX_INVITATION - ln.invitations_sent_last_week, 0),
+        min_mutual=10,
+        max_mutual=450,
+        preferred_users=["Quant"],
+        not_preferred_users=["Sportsman"],
+        view_profile=True,
+    )
+
+    ln.accept_invitations()
+
+    # OR
+    # run smart follow-unfollow method (without setting cron jobs) which essentially does the same thing as
+    # all the above steps
+    ln.smart_follow_unfollow(
+        users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
+        users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
+    )
+
+    # setting and un-setting cron
+    # Use sudo in case you are setting/un-setting cron.
+
+    # set cron on your machine
+    ln.set_smart_cron(settings)
+
+    # remove existing cron jobs
+    ln.remove_cron_jobs(settings=settings)
+```
+
+Alternatively, you can go the command line way, like below.
 
     usage: linkedin.py [-h] [--env ENV] [--email EMAIL] [--password PASSWORD] [--browser BROWSER] [--driver DRIVER] [--headless] [--cron] [--cronuser CRONUSER]
                        [--preferred PREFERRED] [--notpreferred NOTPREFERRED]
@@ -24,8 +82,7 @@ encounter any issue while running the scripts.
       --notpreferred NOTPREFERRED
                             Path to file containing characteristics of not preferred users
 
-Start with following commands. Use `example.env` file as reference while setting values. Use sudo in case you are
-setting crons.
+Start with following commands. Use `example.env` file as reference while setting values.
 
     python linkedin.py --env .env
     python linkedin.py --email abc@gmail.com --password $3cRET --browser Chrome --driver /path/to/chromedriver --cronuser john --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
