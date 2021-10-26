@@ -2,6 +2,7 @@
 linkedin_old.py
 test.html
 .DS_Store
+pytest.ini
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
