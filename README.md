@@ -112,3 +112,4 @@ command.
 TODOS:
 
 - improve documentation
+- Include Tests
