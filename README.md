@@ -1,30 +1,61 @@
 # LinkedIn
 
-Python script to automate some usual tasks performed on social-networking site LinkedIn. The script has been tested on
-macOS and is expected to work on Linux environment as well. Raise an issue/PR if you encounter any issue while running
-the scripts.
+Python package to automate some usual tasks performed on social-networking site LinkedIn.
+
+### What can you do?
+
+The package helps to do the followings [with a number of improvements planned in future]
+
+- Login to LinkedIn
+- Send connection requests
+    - Filter by minimum and maximum number of mutual connections
+    - Filter by kinds of users (preferred and not preferred)
+    - Maximum number of request to be sent
+    - Optionally, view profile of those sending request to
+- Accept connection requests
+- Delete/Withdraw sent connection requests depending on how old they are
+- Create cron jobs on your machine using `python-crontab` to these activities
+- Run smart follow-unfollow
+    - Delete sent requests older than 14 days
+    - Follow maximum number of people possible for the day (based on LinkedIn's weekly limit)
+    - Accept all pending requests
+- Run all of these in the background mode without affecting your usual work
+
+Note: The package has been tested on macOS and is expected to work on Linux/Unix environments as well. Raise an issue/PR
+if you encounter any issue while running the scripts.
 
 Before you proceed:
 
 - Download appropriate chrome driver from https://chromedriver.chromium.org/downloads for the version of the Chrome you
   have installed in your machine.
+- Ensure your Chrome browser and chrome-driver match and are compatible with each other
 - Allow the script to execute the chrome-driver file downloaded above
 
-The best way to run and test the package for your needs is to use `sample_script.py` like below:
+### Getting Started
+
+Install file from PyPi
+
+```bash
+pip install simplelinkedin
+```
+
+The best way to run and test the package for your needs is to use `sample_script.py` like below. Start with running your
+package by supplying `LINKEDIN_BROWSER_HEADLESS=0` and if everything runs well, you can set the same back
+to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
 
 ```python
 from simplelinkedin import LinkedIn
 
 settings = {
-  "LINKEDIN_USER": "<username>",
-  "LINKEDIN_PASSWORD": "<password>",
-  "LINKEDIN_BROWSER": "Chrome",
-  "LINKEDIN_BROWSER_DRIVER": "/path/to/chromedriver",
-  "LINKEDIN_BROWSER_HEADLESS": 0,
-  "LINKEDIN_BROWSER_CRON": 0,
-  "LINKEDIN_CRON_USER": "<root_user>",
-  "LINKEDIN_PREFERRED_USER": "/path/to/preferred/user/text_doc.text",
-  "LINKEDIN_NOT_PREFERRED_USER": "/path/to/not/preferred/user/text_doc.text",
+    "LINKEDIN_USER": "<username>",
+    "LINKEDIN_PASSWORD": "<password>",
+    "LINKEDIN_BROWSER": "Chrome",
+    "LINKEDIN_BROWSER_DRIVER": "/path/to/chromedriver",
+    "LINKEDIN_BROWSER_HEADLESS": 0,
+    "LINKEDIN_BROWSER_CRON": 0,
+    "LINKEDIN_CRON_USER": "<root_user>",
+    "LINKEDIN_PREFERRED_USER": "/path/to/preferred/user/text_doc.text",
+    "LINKEDIN_NOT_PREFERRED_USER": "/path/to/not/preferred/user/text_doc.text",
 }
 
 with LinkedIn(
@@ -34,37 +65,37 @@ with LinkedIn(
         driver_path=settings.get("LINKEDIN_BROWSER_DRIVER"),
         headless=bool(settings.get("LINKEDIN_BROWSER_HEADLESS")),
 ) as ln:
-  # do all the steps manually
-  ln.login()
-  ln.remove_sent_invitations(older_than_days=14)
+    # do all the steps manually
+    ln.login()
+    ln.remove_sent_invitations(older_than_days=14)
 
-  ln.send_invitations(
-    max_invitation=max(ln.WEEKLY_MAX_INVITATION - ln.invitations_sent_last_week, 0),
-    min_mutual=10,
-    max_mutual=450,
-    preferred_users=["Quant"],  # file_path or list of features
-    not_preferred_users=["Sportsman"],  # file_path or list of features
-    view_profile=True,  # (recommended) view profile of users you sent connection request to
-  )
+    ln.send_invitations(
+        max_invitation=max(ln.WEEKLY_MAX_INVITATION - ln.invitations_sent_last_week, 0),
+        min_mutual=10,
+        max_mutual=450,
+        preferred_users=["Quant"],  # file_path or list of features
+        not_preferred_users=["Sportsman"],  # file_path or list of features
+        view_profile=True,  # (recommended) view profile of users you sent connection request to
+    )
 
-  ln.accept_invitations()
+    ln.accept_invitations()
 
-  # OR
-  # run smart follow-unfollow method (without setting cron jobs) which essentially does the same thing as
-  # all the above steps
-  ln.smart_follow_unfollow(
-    users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
-    users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
-  )
+    # OR
+    # run smart follow-unfollow method (without setting cron jobs) which essentially does the same thing as
+    # all the above steps
+    ln.smart_follow_unfollow(
+        users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
+        users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
+    )
 
-  # setting and un-setting cron
-  # Use sudo in case you are setting/un-setting cron.
+    # setting and un-setting cron
+    # Use sudo in case you are setting/un-setting cron.
 
-  # set cron on your machine
-  ln.set_smart_cron(settings)
+    # set cron on your machine
+    ln.set_smart_cron(settings)
 
-  # remove existing cron jobs
-  ln.remove_cron_jobs(settings=settings)
+    # remove existing cron jobs
+    ln.remove_cron_jobs(settings=settings)
 ```
 
 Alternatively, you can go the command line way, like below.
