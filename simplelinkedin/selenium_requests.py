@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import os
 import time
+from collections import OrderedDict
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
@@ -10,6 +13,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 class Session:
+    """A top level class to manage a browser containing one/more Tabs"""
+
     BROWSER_DRIVER_FUNCTION = {
         "Chrome": webdriver.Chrome,
         "FireFox": webdriver.Firefox,
@@ -48,19 +53,20 @@ class Session:
 
         return driver
 
-    def _get_attr_or_env(self, env, raise_exception=True):
-        if hasattr(self, env):
-            return getattr(self, env)
+    def _get_attr_or_env(self, env_var, raise_exception=True):
+        if hasattr(self, env_var):
+            return getattr(self, env_var)
 
-        driver_path = os.getenv(env, None)
+        driver_path = os.getenv(env_var, None)
 
         if driver_path:
-            return os.getenv(env, None)
+            return os.getenv(env_var, None)
 
         if raise_exception:
-            raise Exception(f"Please define {env} as class attribute or environment variable.")
+            raise Exception(f"Please define {env_var} as class attribute or environment variable.")
 
     def close(self):
+        """Close Session"""
         self.__del__()
 
     def __del__(self):
@@ -68,36 +74,77 @@ class Session:
 
 
 class Tab:
-    def __init__(self, session, tab_handle):
+    """Single Tab"""
+
+    def __init__(self, session, tab_handle, start_url: str = None):
         self._session = session
         self.tab_handle = tab_handle
+        self.start_url = start_url
 
     def __str__(self):
-        return f"Tab(tab_handle={self.tab_handle} - title={self.title} - url={self.url}) "
+        return (
+            "Tab("
+            f"start_url={self.start_url}, "
+            f"active={self.is_active}, "
+            f"alive={self.is_alive}, "
+            f"tab_handle={self.tab_handle}"
+            ")"
+        )
+
+    @property
+    def is_alive(self):
+        """Whether the tab is one of the browser tabs"""
+        return self.tab_handle in self._session.driver.window_handles
+
+    @property
+    def is_active(self):
+        """Whether the tab is active tab on the browser"""
+        try:
+            return self._session.driver.current_window_handle == self.tab_handle
+        except:  # noqa
+            return False
 
     @property
     def title(self) -> str:
+        """Returns the title of the page at the moment"""
         return self.driver.title
 
     @property
+    def url(self) -> str:
+        """Returns the title of the page at the moment"""
+        return self.driver.current_url
+
+    @property
     def driver(self) -> webdriver:
-        if not self._session.driver.current_window_handle == self.tab_handle:
+        """Switch to tab (if possible) and return driver"""
+
+        if not self.is_alive:
+            raise Exception("Current window is dead.")
+
+        if not self.is_active:
             self._session.driver.switch_to.window(self.tab_handle)
         return self._session.driver
 
-    @property
-    def url(self) -> str:
-        return self.driver.current_url
-
     def switch(self) -> None:
-        if not self.driver.current_window_handle == self.tab_handle:
-            self.driver.switch_to.window(self.tab_handle)
+        """Switch to tab (if possible)"""
+
+        if self.is_alive:
+            self._session.driver.switch_to.window(self.tab_handle)
+        else:
+            raise Exception(
+                f"Current window is dead. Window Handle={self.tab_handle} does not exist"
+                f" in all currently open window handles: {self._session.driver.window_handles}"
+            )
 
     def open(self, url):
+        """Open a url in the tab"""
+
         self.driver.get(url)
         return self
 
     def click(self, element):
+        """Click a given element on the page represented by the tab"""
+
         try:
             self.switch()
             element.click()
@@ -107,7 +154,9 @@ class Tab:
             except Exception as e:  # noqa
                 pass
 
-    def get_attributes(self, element, attr_name):
+    def get_all_attributes_of_element(self, element) -> dict:
+        """Get all attributes of a given element on the tab's page"""
+
         attr_dict = self.driver.execute_script(
             "var items = {}; for (index = 0; index < arguments[0].attributes.length; ++index) {"
             " items[arguments[0].attributes[index].name] = arguments[0].attributes[index].value };"
@@ -115,9 +164,17 @@ class Tab:
             element,
         )
 
+        return attr_dict
+
+    def get_attribute(self, element, attr_name):
+        """Get specific attributes of a given element on the tab's page"""
+
+        attr_dict = self.get_all_attributes_of_element(element=element)
         return attr_dict[attr_name]
 
     def find_element(self, by, value, multiple=False):
+        """Try to find element given a criteria and the value"""
+
         elements = self.driver.find_elements(by, value)
 
         if multiple:
@@ -131,16 +188,20 @@ class Tab:
             return None
 
     def scroll(self, times=3, wait=1):
+        """Usual scroll"""
 
         for _ in range(times):
             self.scroll_to_bottom(wait=wait)
 
     def scroll_to_bottom(self, wait=1):
+        """Scroll to bottom of the page"""
+
         html = self.driver.find_element_by_tag_name("html")
         html.send_keys(Keys.END)
         time.sleep(wait)
 
     def infinite_scroll(self, retries=5):
+        """Infinite (so many times) scroll"""
 
         for _ in range(max(1, retries)):
             try:
@@ -188,12 +249,15 @@ class Tab:
 
 
 class TabManager:
+    """A manager for multiple tabs associated with a browser"""
+
     def __init__(self, session):
         self._session = session
-        self._all_tabs = {}
+        self._all_tabs = OrderedDict()
 
     @property
     def driver(self):
+        """driver object for the tab"""
         return self._session.driver
 
     def __len__(self):
@@ -206,45 +270,107 @@ class TabManager:
         return " ".join(self.all())
 
     def current_tab(self) -> [Tab, None]:
+        """Get current active tab"""
+
         tab_handle = self.driver.current_window_handle
         return self.get(tab_handle)
 
     def get_blank_tab(self) -> Tab:
+        """Get a blank tab to work with. Switchs to the newly created tab"""
         windows_before = self.driver.current_window_handle
         self.driver.execute_script("""window.open('{}');""".format("about:blank"))
         windows_after = self.driver.window_handles
         new_window = [x for x in windows_after if x != windows_before][-1]
         self.driver.switch_to.window(new_window)
         new_tab = self.create(new_window)
+        new_tab.switch()
         return new_tab
 
     def open_new_tab(self, url):
+        """Open a new tab with with a given URL"""
+
         blank_tab = self.get_blank_tab()
+        blank_tab.start_url = url  # Not a recommended way to update object attributes
+        blank_tab.switch()
         blank_tab.open(url)
         return blank_tab
 
     def all(self):
-        return [str(tab) for tab in self._all_tabs.values()]
+        """All tabs of the browser"""
+        curr_tab = self.current_tab()
+        all_tabs = [tab for tab in self._all_tabs.values()]
+        if curr_tab:
+            curr_tab.switch()
+        return all_tabs
 
     def create(self, tab_handle):
+        """Create a Tab object"""
+
         tab = Tab(session=self._session, tab_handle=tab_handle)
         self.add(tab)
         return tab
 
     def add(self, tab: Tab) -> None:
+        """Add a tab to list of tabs"""
         self._all_tabs.update({tab.tab_handle: tab})
 
     def get(self, tab_handle) -> [Tab, None]:
+        """get a Tab object given their handle/id"""
         return self._all_tabs.get(tab_handle, None)
 
-    def exist(self, tab_handle) -> bool:
-        return tab_handle in self._all_tabs
+    def exist(self, tab: Tab) -> bool:
+        """Check if a tab exist"""
 
-    def remove(self, tab_handle) -> [Tab, None]:
-        return self._all_tabs.pop(tab_handle, None)
+        if isinstance(tab, Tab):
+            return tab.tab_handle in self._all_tabs.keys()
+
+        raise Exception("Invalid type for tab.")
+
+    def remove(self, tab: Tab) -> [Tab, None]:
+        """Remove a tab from the list of tabs"""
+
+        if isinstance(tab, Tab):
+            return self._all_tabs.pop(tab.tab_handle, None)
+
+        raise Exception("Invalid type for tab.")
+
+    def first_tab(self) -> Tab | None:
+        """First tab from the list of tabs of the browser"""
+        try:
+            _, tab = list(self._all_tabs.items())[0]
+            return tab
+        except:  # noqa
+            return None
+
+    def last_tab(self) -> Tab | None:
+        """Last tab from the list of tabs of the browser"""
+        try:
+            _, tab = list(self._all_tabs.items())[-1]
+            return tab
+        except:  # noqa
+            return None
+
+    def switch_to_first_tab(self):
+        """Switch to the first tab"""
+
+        first_tab = self.first_tab()
+        if first_tab and first_tab.is_alive and self.exist(first_tab):
+            first_tab.switch()
+
+    def switch_to_last_tab(self):
+        """Switch to the last tab"""
+
+        last_tab = self.last_tab()
+        if last_tab and last_tab.is_alive and self.exist(last_tab):
+            last_tab.switch()
 
 
 class Browser:
+    """
+    A browser containing session and all the available tabs.
+    Most users will just interact with (objects of) this class.
+    """
+
     BROWSER_DRIVER_PATH_ENV = {
         "Chrome": "CHROME_DRIVER_PATH",
         "FireFox": "FIREFOX_DRIVER_PATH",
@@ -277,10 +403,13 @@ class Browser:
         self.close()
 
     def get_driver_path(self):
+        """Get path of the driver from env or settings"""
+
         driver_env = self.BROWSER_DRIVER_PATH_ENV[self.name]
         return self._get_attr_or_env(driver_env)
 
     def get_current_tab(self):
+        """get current tab from the list of the tabs"""
         return self.tabs.current_tab()
 
     def _get_attr_or_env(self, env, raise_exception=True):
@@ -296,17 +425,40 @@ class Browser:
             raise Exception(f"Please define {env} as class attribute or environment variable.")
 
     def open(self, url):
-        return self.tabs.open_new_tab(url)
+        """Starts a new tab with the given url at end of list of tabs."""
+        self.tabs.switch_to_last_tab()
+        curr_tab = self.tabs.open_new_tab(url)
+        curr_tab.switch()
+        return curr_tab
 
-    def get_all_tabs(self):
-        return "\n".join(self.tabs.all())
+    def get_all_tabs(self) -> list:
+        return self.tabs.all()
+
+    def _remove_tab(self, tab: Tab):
+        """For Internal Use Only:
+
+        The order of operation is extremely important here. Practice extreme caution while editing this."""
+        assert tab.is_alive is True
+        assert self.tabs.exist(tab) is True
+        tab.switch()
+        self.tabs.remove(tab)
+        self._session.driver.close()
+        assert tab.is_alive is False
+        assert self.tabs.exist(tab) is False
 
     def close_tab(self, tab: Tab):
-        tab.switch()
-        self._session.driver.close()
-        self.tabs.remove(tab.tab_handle)
+        """Close a given tab"""
+        if self.tabs.exist(tab):
+            tab.switch()
+            self._remove_tab(tab=tab)
+
+            self.tabs.switch_to_last_tab()
+            return True
+        else:
+            raise Exception("Tab does not exist.")
 
     def close(self):
+        """Close browser"""
         self.tabs = {}
         self._session.close()
 
@@ -318,6 +470,12 @@ if __name__ == "__main__":
         google = browser.open("https://google.com")
         yahoo = browser.open("https://yahoo.com")
         bing = browser.open("https://bing.com")
+        duck_duck = browser.open("https://duckduckgo.com/")
+
+        print(browser.get_all_tabs())
+
+        browser.close_tab(bing)
+        print(browser.get_all_tabs())
 
         print(browser.get_current_tab())
         time.sleep(5)
@@ -330,10 +488,9 @@ if __name__ == "__main__":
         print(browser.get_current_tab())
         time.sleep(5)
 
-        browser.close_tab(bing)
+        browser.close_tab(yahoo)
         time.sleep(5)
 
-        print(yahoo.driver.title)
-        print(google.driver.title)
+        print(google.driver.title, google.title)
 
         print(browser.get_all_tabs())

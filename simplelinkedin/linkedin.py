@@ -308,6 +308,10 @@ class LinkedIn(AbstractBaseLinkedin):
         retry_times = 5
 
         for _ in range(retry_times):
+
+            if invitations > max_invitation:
+                break
+
             networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
 
             networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
@@ -429,7 +433,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
             next_button = next_button.find_element(by=By.XPATH, value="..")
 
-            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attributes(
+            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attribute(
                 next_button, "class"
             ):
                 break
@@ -482,9 +486,8 @@ class LinkedIn(AbstractBaseLinkedin):
 
                 next_button = next_button.find_element(by=By.XPATH, value="..")
 
-                if (
-                    pagination_disabled_next_button_class_name
-                    in sent_invitation_tab.get_attributes(next_button, "class")
+                if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attribute(
+                    next_button, "class"
                 ):
                     break
 
