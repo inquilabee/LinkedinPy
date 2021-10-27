@@ -36,12 +36,13 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.7"
 selenium = "3.141.0"
 python-dotenv = "0.18.0"
 toml = "0.10.2"
 python-crontab = "2.5.1"
 pytest-env = "^0.6.2"
+simpleselenium = "^0.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.2"

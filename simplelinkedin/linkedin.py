@@ -16,8 +16,7 @@ from typing import List, Optional
 from crontab import CronTab
 from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
-
-from simplelinkedin.selenium_requests import Browser
+from simpleselenium import Browser
 
 
 def ignore_exception(func):
