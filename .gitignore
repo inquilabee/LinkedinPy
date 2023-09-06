@@ -133,3 +133,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.tox
+*.log
+.env
+data
+!/simplelinkedin/crons/

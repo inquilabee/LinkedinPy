@@ -1,0 +1,10 @@
+selenium==4.12.0
+PyAutoGUI==0.9.54
+
+simpleselenium==0.4.1
+
+django-environ
+python-dotenv
+
+python-crontab
+PyYAML

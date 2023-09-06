@@ -1,37 +1,67 @@
-exclude: '.git|.tox'
+exclude: '^docs/|/migrations/'
 default_stages: [ commit ]
-fail_fast: true
+fail_fast: false
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.4.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+      - id: check-json
       - id: check-toml
-      - id: check-merge-conflict
+      - id: check-xml
+      - id: check-yaml
+      - id: debug-statements
+      - id: check-builtin-literals
+      - id: check-case-conflict
+      - id: check-docstring-first
+      - id: detect-private-key
 
-  - repo: https://github.com/psf/black
-    rev: 20.8b1
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.7.0
     hooks:
-      - id: black
+      - id: pyupgrade
+        args: [ --py311-plus ]
 
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.6.4
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
     hooks:
       - id: isort
 
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.8.4
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.0.280
     hooks:
-      - id: flake8
-        additional_dependencies: [ flake8-isort ]
+      - id: ruff
+        args: [ --fix, --exit-non-zero-on-fix ]
+        types_or: [ python, pyi, jupyter ]
 
-  - repo: local
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
     hooks:
-      - id: pytest-check
-        name: pytest-check
-        entry: pytest
-        language: system
-        pass_filenames: false
-        always_run: true
+      - id: black
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [ "-c", "bandit.yaml" ]
+
+  - repo: https://github.com/sourcery-ai/sourcery
+    # Source: https://docs.sourcery.ai/Guides/Getting-Started/Pre-Commit/
+    # https://sourcery.ai/blog/python-best-practices/
+    rev: v1.6.0
+    hooks:
+      - id: sourcery
+        # only check the files which have changed: does not work on first commit
+        args: [ --diff=git diff HEAD, --no-summary ]
+        # args: [ --diff=git diff HEAD, --fix, --no-summary ]
+        # args: [ --fix, --no-summary ]
+
+
+# sets up .pre-commit-ci.yaml to ensure pre-commit dependencies stay up to date
+ci:
+  autoupdate_schedule: weekly
+  skip: [ ]
+  submodules: false

@@ -10,26 +10,18 @@ The package helps to do the followings [with a number of improvements planned in
 - Send connection requests
     - Filter by minimum and maximum number of mutual connections
     - Filter by kinds of users (preferred and not preferred)
-    - Maximum number of request to be sent
-    - Optionally, view profile of those sending request to
+    - Maximum number of requests to be sent
+    - Optionally, view the profile of those sending request to
 - Accept connection requests
 - Delete/Withdraw sent connection requests depending on how old they are
-- Create cron jobs on your machine using `python-crontab` to these activities
 - Run smart follow-unfollow
     - Delete sent requests older than 14 days
-    - Follow maximum number of people possible for the day (based on LinkedIn's weekly limit)
+    - Follow the maximum number of people possible for the day (based on LinkedIn's weekly limit)
     - Accept all pending requests
 - Run all of these in the background mode without affecting your usual work
 
 Note: The package has been tested on macOS and is expected to work on Linux/Unix environments as well. Raise an issue/PR
 if you encounter any issue while running the scripts.
-
-Before you proceed:
-
-- Download appropriate chrome driver from https://chromedriver.chromium.org/downloads for the version of the Chrome you
-  have installed in your machine.
-- Ensure your Chrome browser and chrome-driver match and are compatible with each other
-- Allow the script to execute the chrome-driver file downloaded above
 
 ### Getting Started
 
@@ -44,16 +36,13 @@ package by supplying `LINKEDIN_BROWSER_HEADLESS=0` and if everything runs well, 
 to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
 
 ```python
-from simplelinkedin import LinkedIn
+from simplelinkedin.linkedin import LinkedIn
 
 settings = {
     "LINKEDIN_USER": "<username>",
     "LINKEDIN_PASSWORD": "<password>",
     "LINKEDIN_BROWSER": "Chrome",
-    "LINKEDIN_BROWSER_DRIVER": "/path/to/chromedriver",
     "LINKEDIN_BROWSER_HEADLESS": 0,
-    "LINKEDIN_BROWSER_CRON": 0,
-    "LINKEDIN_CRON_USER": "<root_user>",
     "LINKEDIN_PREFERRED_USER": "/path/to/preferred/user/text_doc.text",
     "LINKEDIN_NOT_PREFERRED_USER": "/path/to/not/preferred/user/text_doc.text",
 }
@@ -62,7 +51,6 @@ with LinkedIn(
         username=settings.get("LINKEDIN_USER"),
         password=settings.get("LINKEDIN_PASSWORD"),
         browser=settings.get("LINKEDIN_BROWSER"),
-        driver_path=settings.get("LINKEDIN_BROWSER_DRIVER"),
         headless=bool(settings.get("LINKEDIN_BROWSER_HEADLESS")),
 ) as ln:
     # do all the steps manually
@@ -81,66 +69,58 @@ with LinkedIn(
     ln.accept_invitations()
 
     # OR
-    # run smart follow-unfollow method (without setting cron jobs) which essentially does the same thing as
+    # run smart follow-unfollow method which essentially does the same thing as
     # all the above steps
     ln.smart_follow_unfollow(
         users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
         users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
     )
-
-    # setting and un-setting cron
-    # Use sudo in case you are setting/un-setting cron.
-
-    # set cron on your machine
-    ln.set_smart_cron(settings)
-
-    # remove existing cron jobs
-    ln.remove_cron_jobs(settings=settings)
 ```
 
 Alternatively, you can go the command line way, like below.
 
-    usage: linkedin.py [-h] [--env ENV] [--email EMAIL] [--password PASSWORD] [--browser BROWSER] [--driver DRIVER] [--headless] [--cron] [--cronuser CRONUSER]
-                       [--preferred PREFERRED] [--notpreferred NOTPREFERRED]
+    > python -m simplelinkedin -h
 
-    optional arguments:
+    usage: simplelinkedin [-h] [--env ENV] [--email EMAIL] [--password PASSWORD]
+                          [--browser BROWSER] [--headless] [--preferred PREFERRED]
+                          [--notpreferred NOTPREFERRED]
+
+    options:
       -h, --help            show this help message and exit
       --env ENV             Linkedin environment file
       --email EMAIL         Email of linkedin user
       --password PASSWORD   Password of linkedin user
       --browser BROWSER     Browser used for linkedin
-      --driver DRIVER       Path to Chrome/Firefox driver
       --headless            Whether to run headless
-      --cron                Whether to create a cron job
-      --cronuser CRONUSER   Run cron jobs as this user
-      --rmcron              Whether to remove existing cron
       --preferred PREFERRED
-                            Path to file containing preferred users characteristics
+                            Path to file containing preferred users
+                            characteristics
       --notpreferred NOTPREFERRED
-                            Path to file containing characteristics of not preferred users
+                            Path to file containing characteristics of not
+                            preferred users
 
-Start with following commands. Use `example.env` file as reference while setting values. Prepend `sudo` if
-setting/un-setting cron in the commands below.
+Start with the following commands.
+Use `example.env` file as reference while setting `.env` values.
 
     python linkedin.py --env .env
-    python linkedin.py --email abc@gmail.com --password $3cRET --browser Chrome --driver /path/to/chromedriver --cronuser john --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
+    python linkedin.py --email abc@gmail.com --password $3cRET --browser Chrome --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
 
-If the above command works, you can change `.env` file and set `LINKEDIN_BROWSER_CRON=1` or pass `--cron` in the second
-command.
 
 `example.env`
 
     LINKEDIN_USER=
     LINKEDIN_PASSWORD=
     LINKEDIN_BROWSER=Chrome
-    LINKEDIN_BROWSER_DRIVER=
-    LINKEDIN_BROWSER_HEADLESS=0
-    LINKEDIN_BROWSER_CRON=0
-    LINKEDIN_CRON_USER=
+    LINKEDIN_BROWSER_HEADLESS=1
     LINKEDIN_PREFERRED_USER=data/users_preferred.txt
     LINKEDIN_NOT_PREFERRED_USER=data/users_not_preferred.txt
 
-TODOS:
+
+### Extras
+
+This package makes use of another package named [simpleselenium](https://github.com/inquilabee/simpleselenium). Do check that out.
+
+### TODOS
 
 - improve documentation
 - Include Tests

@@ -1,0 +1,21 @@
+# YAML copied from: https://realpython.com/python-logging/#other-configuration-methods
+version: 1
+formatters:
+  extended:
+    format: '%(asctime)-20s :: %(levelname)-8s :: [%(process)d]%(processName)s :: %(threadName)s[%(thread)d] :: %(pathname)s :: %(lineno)d :: %(message)s'
+  simple:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: simple
+    stream: ext://sys.stdout
+loggers:
+  sampleLogger:
+    level: DEBUG
+    handlers: [console]
+    propagate: no
+root:
+  level: DEBUG
+  handlers: [console]
