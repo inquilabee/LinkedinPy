@@ -33,8 +33,9 @@ Install file from PyPi
 pip install simplelinkedin
 ```
 
-The best way to run and test the package for your needs is to use `sample_script.py` like below. Start with running your
-package by supplying `LINKEDIN_BROWSER_HEADLESS=0` and if everything runs well, you can set the same back
+The best way to run and test the package for your needs is to copy `samplelinkedin/scripts/sample_script.py` like below.
+
+Start with running your package by supplying `LINKEDIN_BROWSER_HEADLESS=0` and if everything runs well, you can set the same back
 to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
 
 ```python
@@ -72,7 +73,7 @@ with LinkedIn(
     ln.accept_invitations()
 
     # OR
-    # run smart follow-unfollow method which essentially does the same thing as
+    # just run smart follow-unfollow method which essentially does the same thing as
     # all the above steps
 
     ln.smart_follow_unfollow(
