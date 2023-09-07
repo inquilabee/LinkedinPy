@@ -17,16 +17,18 @@ with LinkedIn(
 ) as ln:
     ln.login()
 
-    print(ln.invitations_sent_last_week())
+    max_invitations = ln.WEEKLY_MAX_INVITATION - ln.count_invitations_sent_last_week()
 
-    ln.remove_sent_invitations(older_than_days=14)
+    print(max_invitations)
+
+    ln.remove_sent_invitations(max_remove=2, older_than_days=14)
 
     ln.send_invitations(
-        max_invitation=max(ln.WEEKLY_MAX_INVITATION - ln.invitations_sent_last_week(), 0),
-        min_mutual=10,
-        max_mutual=450,
-        preferred_users="./scripts/data/user_preferred.txt",
-        not_preferred_users="./scripts/data/user_not_preferred.txt",
+        max_invitations=2,
+        min_mutual=100,
+        max_mutual=550,
+        preferred_users="./data/user_preferred.txt",
+        not_preferred_users="./data/user_not_preferred.txt",
         view_profile=True,
     )
 

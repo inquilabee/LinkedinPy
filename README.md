@@ -56,9 +56,10 @@ with LinkedIn(
     # do all the steps manually
     ln.login()
     ln.remove_sent_invitations(older_than_days=14)
+    last_week_invitations = ln.count_invitations_sent_last_week()
 
     ln.send_invitations(
-        max_invitation=max(ln.WEEKLY_MAX_INVITATION - ln.invitations_sent_last_week, 0),
+        max_invitations=max(ln.WEEKLY_MAX_INVITATION - last_week_invitations , 0),
         min_mutual=10,
         max_mutual=450,
         preferred_users=["Quant"],  # file_path or list of features
@@ -71,7 +72,12 @@ with LinkedIn(
     # OR
     # run smart follow-unfollow method which essentially does the same thing as
     # all the above steps
+
     ln.smart_follow_unfollow(
+        min_mutual= 0,
+        max_mutual = 500,
+        withdraw_invite_older_than_days = 14,
+        max_invitations_to_send= 0,
         users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
         users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
     )

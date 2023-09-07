@@ -34,7 +34,7 @@ class AbstractBaseLinkedin(ABC):
         return self.browser.tabs
 
     @abstractmethod
-    def invitations_sent_last_week(self, force_counting: bool = False) -> int:
+    def count_invitations_sent_last_week(self, force_counting: bool = False) -> int:
         pass
 
     @abstractmethod
