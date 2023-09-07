@@ -1,6 +1,8 @@
 # LinkedIn
 
-Python package to automate some usual tasks performed on social-networking site LinkedIn.
+Python ❤️ LinkedIn
+
+Use Python to automate usual tasks on LinkedIn.
 
 ### What can you do?
 
@@ -83,36 +85,67 @@ with LinkedIn(
     )
 ```
 
-Alternatively, you can go the command line way, like below.
+
+### Command line usage
+
+You can go the command line way, like below.
 
     > python -m simplelinkedin -h
 
     usage: simplelinkedin [-h] [--env ENV] [--email EMAIL] [--password PASSWORD]
-                          [--browser BROWSER] [--headless] [--preferred PREFERRED]
-                          [--notpreferred NOTPREFERRED]
+                          [--browser BROWSER] [--headless] [--maxinvite MAXINVITE]
+                          [--minmutual MINMUTUAL] [--maxmutual MAXMUTUAL]
+                          [--withdrawdays WITHDRAWDAYS] [--preferred PREFERRED]
+                          [--notpreferred NOTPREFERRED] [--cronfile CRONFILE]
+                          [--cronuser CRONUSER] [--rmcron | --no-rmcron]
+                          [--cronhour CRONHOUR]
 
     options:
       -h, --help            show this help message and exit
       --env ENV             Linkedin environment file
-      --email EMAIL         Email of linkedin user
-      --password PASSWORD   Password of linkedin user
-      --browser BROWSER     Browser used for linkedin
-      --headless            Whether to run headless
+      --email EMAIL         Email of LinkedIn user
+      --password PASSWORD   Password of LinkedIn user
+      --browser BROWSER     Browser used for LinkedIn
+      --headless            Whether to run headless (i.e. without the browser
+                            visible in the front.)
+      --maxinvite MAXINVITE
+                            Maximum number of invitations to send
+      --minmutual MINMUTUAL
+                            Minimum number of mutual connections required.
+      --maxmutual MAXMUTUAL
+                            Maximum number of mutual connections required.
+      --withdrawdays WITHDRAWDAYS
+                            Withdraw invites older than this many days
       --preferred PREFERRED
                             Path to file containing preferred users
                             characteristics
       --notpreferred NOTPREFERRED
                             Path to file containing characteristics of not
                             preferred users
+      --cronfile CRONFILE   Path to cronfile
+      --cronuser CRONUSER   Name of user setting cron on the machine (needed by
+                            most OS)
+      --rmcron, --no-rmcron
+                            Whether to remove existing crons.
+      --cronhour CRONHOUR   hour of the day you want to set cron for each day.
 
-Start with the following commands.
-Use `example.env` file as reference while setting `.env` values.
 
-    python linkedin.py --env .env
-    python linkedin.py --email abc@gmail.com --password $3cRET --browser Chrome --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
+Start with the following commands. (Use `example.env` file as reference while setting `.env` values)
+
+    python -m simplelinkedin --env .env
+    python -m simplelinkedin --email abc@gmail.com --password $3cRET --browser Chrome --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
 
 
-`example.env`
+### Settings crons
+
+    python -m simplelinkedin --cronfile .cron.env --cronuser osuser --cronhour 23
+
+Supply `--rmcron` to remove existing cron
+
+    python -m simplelinkedin --rmcron --cronuser osuser
+    python -m simplelinkedin --cronfile .cron.env --cronuser osuser --cronhour 23 --rmcron
+
+### Example `example.env`
 
     LINKEDIN_USER=
     LINKEDIN_PASSWORD=
@@ -120,11 +153,14 @@ Use `example.env` file as reference while setting `.env` values.
     LINKEDIN_BROWSER_HEADLESS=1
     LINKEDIN_PREFERRED_USER=data/users_preferred.txt
     LINKEDIN_NOT_PREFERRED_USER=data/users_not_preferred.txt
-
+    LINKEDIN_MIN_MUTUAL=0
+    LINKEDIN_MAX_MUTUAL=500
+    LINKEDIN_MAX_INVITE=0
+    LINKEDIN_WITHDRAW_INVITE_BEFORE_DAYS=14
 
 ### Extras
 
-This package makes use of another package named [simpleselenium](https://github.com/inquilabee/simpleselenium). Do check that out.
+This package makes heavy use of another package named [simpleselenium](https://github.com/inquilabee/simpleselenium). Do check that out.
 
 ### TODOS
 
