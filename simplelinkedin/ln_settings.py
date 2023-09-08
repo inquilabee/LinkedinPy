@@ -84,7 +84,13 @@ def get_linkedin_settings(command_args=None) -> LinkedInSettings:
 
             setattr(settings, arg_name, value)
 
+    # TODO: Manual typecasting? too bad ';(
+
     settings.LINKEDIN_BROWSER_HEADLESS = int(settings.LINKEDIN_BROWSER_HEADLESS)
+    settings.LINKEDIN_MAX_MUTUAL = int(settings.LINKEDIN_MAX_MUTUAL)
+    settings.LINKEDIN_MIN_MUTUAL = int(settings.LINKEDIN_MIN_MUTUAL)
+    settings.LINKEDIN_MAX_INVITE = int(settings.LINKEDIN_MAX_INVITE)
+    settings.LINKEDIN_WITHDRAW_INVITE_BEFORE_DAYS = int(settings.LINKEDIN_WITHDRAW_INVITE_BEFORE_DAYS)
 
     settings.LINKEDIN_PREFERRED_USER = str(Path(settings.LINKEDIN_PREFERRED_USER).absolute())
     settings.LINKEDIN_NOT_PREFERRED_USER = str(Path(settings.LINKEDIN_NOT_PREFERRED_USER).absolute())

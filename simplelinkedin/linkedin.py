@@ -18,6 +18,7 @@ class LinkedIn(AbstractBaseLinkedin):
     NETWORK_RECEIVED_INVITATIONS_PAGE = "https://www.linkedin.com/mynetwork/invitation-manager/"
     NETWORK_SENT_INVITATIONS_PAGE = "https://www.linkedin.com/mynetwork/invitation-manager/sent/"
     USER_PROFILE_PAGE = "https://www.linkedin.com/in/{username}/"
+    USER_FEED_URL = "https://www.linkedin.com/feed/"
 
     MAX_WAIT_STALENESS = 10
 
@@ -32,23 +33,28 @@ class LinkedIn(AbstractBaseLinkedin):
         self.__last_week_invitations: int = 0
         self.logger = getLogger(__name__)
 
-    def convert_invitation_sent_text_to_days(self, invitation_time: str):
+    def convert_invitation_sent_text_to_days(self, invitation_time: str) -> int | float:
         """Find how many days ago an invitation was sent."""
 
-        # Sent <number?> <seconds/minutes/days/months/years/today> <ago?>
+        # Sent <number?> <seconds/minutes/days/months/years/today/yesterday> <ago?>
 
         self.logger.info(f"Sent ago text: {invitation_time}")
+
+        recently_sent_units = ["second", "minute", "hour", "today", "yesterday"]
+
+        if any(r_units in invitation_time for r_units in recently_sent_units):
+            self.logger.info(f"Invitation seems to sent very recently: {invitation_time}")
+            return 1
 
         try:
             _, num, unit, _ = invitation_time.split()
         except ValueError:
-            self.logger.info(f"Invitation seems to sent very recently: {invitation_time}")
+            self.logger.error(f"Error in converting to days: {invitation_time}. Returning 1.")
             return 1
 
         num = int(num)
 
-        if any(_unit in unit for _unit in ["second", "minute", "hour", "today"]):
-            return 1
+        # TODO: need addendum for days? 1 month ago can mean 1 to 1 month 29 days ago.
 
         factor = {
             "day": 1,
@@ -58,7 +64,7 @@ class LinkedIn(AbstractBaseLinkedin):
         }
 
         result = next(
-            (multi_factor * num for _unit, multi_factor in factor.items() if _unit in unit),
+            (multi_factor * num for factor, multi_factor in factor.items() if factor in unit),
             -1,
         )
 
@@ -342,7 +348,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return sent_invitation_tab, sent_invitation_cards
 
-    def remove_sent_invitations(self, older_than_days=10, max_remove=20) -> int:
+    def remove_sent_invitations(self, older_than_days: int = 10, max_remove=20) -> int:
         """
 
         :param older_than_days: withdraw invitations with more than this many days

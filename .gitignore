@@ -139,3 +139,4 @@ dmypy.json
 .env
 data
 .cron.env
+todos.md
