@@ -1,49 +1,36 @@
-# LinkedIn
+# SimpleLinkedIn
 
-Python ❤️ LinkedIn
+Elevate your LinkedIn game with **SimpleLinkedIn**, a Python package designed for automating routine LinkedIn tasks. Whether you want to connect with specific users, manage connection requests, or optimize your LinkedIn networking, this package has you covered.
 
-Use Python to automate usual tasks on LinkedIn.
+### Key Features
 
-### What can you do?
+- **Login to LinkedIn**: Seamlessly access your LinkedIn account.
+- **Send Connection Requests**: Customize your connection requests by filtering users based on mutual connections, user types, and more.
+- **Accept Connection Requests**: Simplify the process of accepting incoming connection requests.
+- **Delete/Withdraw Sent Requests**: Keep your connection list clean by removing outdated sent requests.
+- **Smart Follow-Unfollow**: Automatically manage connections, delete aged requests, and maximize your daily interactions within LinkedIn's limits.
+- **Background Mode**: Run all tasks in the background mode without interfering with your regular work.
 
-The package helps to do the followings [with a number of improvements planned in future]
-
-- Login to LinkedIn
-- Send connection requests
-    - Filter by minimum and maximum number of mutual connections
-    - Filter by kinds of users (preferred and not preferred)
-    - Maximum number of requests to be sent
-    - Optionally, view the profile of those sending request to
-- Accept connection requests
-- Delete/Withdraw sent connection requests depending on how old they are
-- Run smart follow-unfollow
-    - Delete sent requests older than 14 days
-    - Follow the maximum number of people possible for the day (based on LinkedIn's weekly limit)
-    - Accept all pending requests
-- Run all of these in the background mode without affecting your usual work
-
-Note: The package has been tested on macOS and is expected to work on Linux/Unix environments as well. Raise an issue/PR
-if you encounter any issue while running the scripts.
+**Note**: **SimpleLinkedIn** has been tested on macOS and is expected to work on Linux/Unix environments as well. If you encounter any issues while running the scripts, feel free to raise an issue or submit a pull request.
 
 ### Getting Started
 
-Install file from PyPi
+To get started with **SimpleLinkedIn**, first, install the package from PyPi using the following command:
 
 ```bash
 pip install simplelinkedin
 ```
 
-The best way to run and test the package for your needs is to copy `samplelinkedin/scripts/sample_script.py` like below.
+Next, you can run and test the package by creating a script similar to `samplelinkedin/scripts/sample_script.py`. Start by running your script with `LINKEDIN_BROWSER_HEADLESS=0` to ensure everything works as expected. Once you're confident, switch to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
 
-Start with running your package by supplying `LINKEDIN_BROWSER_HEADLESS=0` and if everything runs well, you can set the same back
-to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
+Here's a simplified example of running **SimpleLinkedIn**:
 
 ```python
 from simplelinkedin.linkedin import LinkedIn
 
 settings = {
-    "LINKEDIN_USER": "<username>",
-    "LINKEDIN_PASSWORD": "<password>",
+    "LINKEDIN_USER": "<your_username>",
+    "LINKEDIN_PASSWORD": "<your_password>",
     "LINKEDIN_BROWSER": "Chrome",
     "LINKEDIN_BROWSER_HEADLESS": 0,
     "LINKEDIN_PREFERRED_USER": "/path/to/preferred/user/text_doc.text",
@@ -56,7 +43,7 @@ with LinkedIn(
         browser=settings.get("LINKEDIN_BROWSER"),
         headless=bool(settings.get("LINKEDIN_BROWSER_HEADLESS")),
 ) as ln:
-    # do all the steps manually
+    # Perform LinkedIn actions here
     ln.login()
     ln.remove_sent_invitations(older_than_days=14)
     last_week_invitations = ln.count_invitations_sent_last_week()
@@ -67,103 +54,64 @@ with LinkedIn(
         max_mutual=450,
         preferred_users=["Quant"],  # file_path or list of features
         not_preferred_users=["Sportsman"],  # file_path or list of features
-        view_profile=True,  # (recommended) view profile of users you sent connection request to
+        view_profile=True,  # (recommended) view profile of users you sent connection requests to
     )
 
     ln.accept_invitations()
 
-    # OR
-    # just run smart follow-unfollow method which essentially does the same thing as
-    # all the above steps
+    # Customize your actions as needed
+    # ...
 
+    # Alternatively, use the smart follow-unfollow method for a streamlined approach
     ln.smart_follow_unfollow(
-        min_mutual= 0,
-        max_mutual = 500,
-        withdraw_invite_older_than_days = 14,
-        max_invitations_to_send= 0,
+        min_mutual=0,
+        max_mutual=500,
+        withdraw_invite_older_than_days=14,
+        max_invitations_to_send=0,
         users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
         users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
     )
 ```
 
+### Command Line Usage
 
-### Command line usage
+**SimpleLinkedIn** provides a convenient command-line interface for easy interaction. You can execute tasks directly from the command line with options like:
 
-You can go the command line way, like below.
+```bash
+python -m simplelinkedin -h
+```
 
-    > python -m simplelinkedin -h
+This command will display a list of available options, allowing you to configure and execute LinkedIn tasks without writing scripts.
 
-    usage: simplelinkedin [-h] [--env ENV] [--email EMAIL] [--password PASSWORD]
-                          [--browser BROWSER] [--headless] [--maxinvite MAXINVITE]
-                          [--minmutual MINMUTUAL] [--maxmutual MAXMUTUAL]
-                          [--withdrawdays WITHDRAWDAYS] [--preferred PREFERRED]
-                          [--notpreferred NOTPREFERRED] [--cronfile CRONFILE]
-                          [--cronuser CRONUSER] [--rmcron | --no-rmcron]
-                          [--cronhour CRONHOUR]
+### Setting Up Cron Jobs
 
-    options:
-      -h, --help            show this help message and exit
-      --env ENV             Linkedin environment file
-      --email EMAIL         Email of LinkedIn user
-      --password PASSWORD   Password of LinkedIn user
-      --browser BROWSER     Browser used for LinkedIn
-      --headless            Whether to run headless (i.e. without the browser
-                            visible in the front.)
-      --maxinvite MAXINVITE
-                            Maximum number of invitations to send
-      --minmutual MINMUTUAL
-                            Minimum number of mutual connections required.
-      --maxmutual MAXMUTUAL
-                            Maximum number of mutual connections required.
-      --withdrawdays WITHDRAWDAYS
-                            Withdraw invites older than this many days
-      --preferred PREFERRED
-                            Path to file containing preferred users
-                            characteristics
-      --notpreferred NOTPREFERRED
-                            Path to file containing characteristics of not
-                            preferred users
-      --cronfile CRONFILE   Path to cronfile
-      --cronuser CRONUSER   Name of user setting cron on the machine (needed by
-                            most OS)
-      --rmcron, --no-rmcron
-                            Whether to remove existing crons.
-      --cronhour CRONHOUR   hour of the day you want to set cron for each day.
+To schedule recurring tasks, you can set up cron jobs using **SimpleLinkedIn**. Here's how:
 
+1. Start with the following commands. (Use `example.env` as a reference while setting `.env` values)
 
-Start with the following commands. (Use `example.env` file as reference while setting `.env` values)
+```bash
+python -m simplelinkedin --env .env
+```
 
-    python -m simplelinkedin --env .env
-    python -m simplelinkedin --email abc@gmail.com --password $3cRET --browser Chrome --preferred data/users_preferred.txt --notpreferred data/users_not_preferred.txt
+2. You can supply `--rmcron` to remove existing cron jobs:
 
+```bash
+python -m simplelinkedin --rmcron --cronuser osuser
+```
 
-### Settings crons
+3. To create a new cron job, specify the desired settings:
 
-    python -m simplelinkedin --cronfile .cron.env --cronuser osuser --cronhour 23
+```bash
+python -m simplelinkedin --cronfile .cron.env --cronuser osuser --cronhour 23
+```
 
-Supply `--rmcron` to remove existing cron
-
-    python -m simplelinkedin --rmcron --cronuser osuser
-    python -m simplelinkedin --cronfile .cron.env --cronuser osuser --cronhour 23 --rmcron
-
-### Example `example.env`
-
-    LINKEDIN_USER=
-    LINKEDIN_PASSWORD=
-    LINKEDIN_BROWSER=Chrome
-    LINKEDIN_BROWSER_HEADLESS=1
-    LINKEDIN_PREFERRED_USER=data/users_preferred.txt
-    LINKEDIN_NOT_PREFERRED_USER=data/users_not_preferred.txt
-    LINKEDIN_MIN_MUTUAL=0
-    LINKEDIN_MAX_MUTUAL=500
-    LINKEDIN_MAX_INVITE=0
-    LINKEDIN_WITHDRAW_INVITE_BEFORE_DAYS=14
+These cron jobs enable you to automate your LinkedIn tasks at specific times, enhancing your networking efficiency.
 
 ### Extras
 
-This package makes heavy use of another package named [simpleselenium](https://github.com/inquilabee/simpleselenium). Do check that out.
+**SimpleLinkedIn** heavily relies on another package named [SimpleSelenium](https://github.com/inquilabee/simpleselenium). Feel free to explore that package for additional functionality.
 
-### TODOS
+### TODOs
 
-- improve documentation
-- Include Tests
+- Enhance documentation
+- Include comprehensive tests
