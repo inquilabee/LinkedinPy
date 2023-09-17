@@ -13,14 +13,17 @@ class AbstractBaseLinkedin(ABC):
     NETWORK_RECEIVED_INVITATIONS_PAGE: str
     NETWORK_SENT_INVITATIONS_PAGE: str
     USER_PROFILE_PAGE: str
+    USER_FEED_URL: str
+
     WEEKLY_MAX_INVITATION: int = 100
+    IMPLICIT_WAIT: int = 10
 
     def __init__(self, username, password, browser, headless):
         self.username = username
         self.password = password
         self.browser_name = browser
         self._user_logged_in: bool = False
-        self.browser = Browser(name=browser, implicit_wait=10, headless=headless)
+        self.browser = Browser(name=browser, implicit_wait=self.IMPLICIT_WAIT, headless=headless)
         self.logger = settings.getLogger(__name__)
 
     def __enter__(self):
@@ -62,7 +65,7 @@ class AbstractBaseLinkedin(ABC):
         pass
 
     @abstractmethod
-    def remove_sent_invitations(self, older_tha_days=14, max_remove=20):
+    def withdraw_sent_invitations(self, older_tha_days=14, max_remove=20):
         pass
 
     @abstractmethod

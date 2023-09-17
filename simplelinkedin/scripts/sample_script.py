@@ -17,11 +17,13 @@ with LinkedIn(
 ) as ln:
     ln.login()
 
+    ln.remove_recommendations(min_mutual=0, max_mutual=50)
+
     max_invitations = ln.WEEKLY_MAX_INVITATION - ln.count_invitations_sent_last_week()
 
     print(max_invitations)
 
-    ln.remove_sent_invitations(max_remove=2, older_than_days=14)
+    ln.withdraw_sent_invitations(max_remove=2, older_than_days=14)
 
     ln.send_invitations(
         max_invitations=2,

@@ -1,14 +1,12 @@
 import os
 from contextlib import suppress
-from pathlib import Path
 
-from selenium.webdriver.common.by import By
 from simpleselenium import Tab
-from simpleselenium.utils.core import find_element_by_text
+from simpleselenium.wait import humanized_wait
 
 from simplelinkedin.base_linkedin import AbstractBaseLinkedin
 from simplelinkedin.settings import getLogger
-from simplelinkedin.wait import humanized_wait
+from simplelinkedin.utils.core import find_in_text, get_preferences
 
 
 class LinkedIn(AbstractBaseLinkedin):
@@ -33,7 +31,7 @@ class LinkedIn(AbstractBaseLinkedin):
         self.__last_week_invitations: int = 0
         self.logger = getLogger(__name__)
 
-    def convert_invitation_sent_text_to_days(self, invitation_time: str) -> int | float:
+    def _convert_invitation_sent_text_to_days(self, invitation_time: str) -> int | float:
         """Find how many days ago an invitation was sent."""
 
         # Sent <number?> <seconds/minutes/days/months/years/today/yesterday> <ago?>
@@ -72,21 +70,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return result
 
-    @staticmethod
-    def is_matching_user_preference(user_details: dict, preferences: list) -> bool:
-        """A simple substring search to know if a given user matches the set preferences."""
-
-        # TODO: Improve matching algorithm
-
-        if not preferences:
-            return True
-
-        if user_card_text := user_details["occupation"]:
-            return any(pref in user_card_text or user_card_text in pref for pref in preferences)
-        else:
-            return False
-
-    def is_user_eligible(
+    def _is_user_eligible(
         self,
         user_details: dict,
         preferred_users: list = None,
@@ -97,20 +81,14 @@ class LinkedIn(AbstractBaseLinkedin):
         :return: True if the user matches criteria, False otherwise
         """
 
-        # Order of the operation is very important
-        # filter by mutual connections
-        # match with preference
-        # match with not preferred
-        # None of the above method worked, return False
-
-        matching_preference = isinstance(preferred_users, list) and self.is_matching_user_preference(
-            user_details, preferred_users
+        matching_preference = isinstance(preferred_users, list) and find_in_text(
+            user_details["occupation"], preferred_users
         )
 
         matching_not_preference = (
             not_preferred_users  # !important
             and isinstance(not_preferred_users, list)
-            and self.is_matching_user_preference(user_details, not_preferred_users)
+            and find_in_text(user_details["occupation"], not_preferred_users)
         )
 
         self.logger.info(f"""User info: {user_details}""")
@@ -122,63 +100,36 @@ class LinkedIn(AbstractBaseLinkedin):
     def login(self) -> bool:
         """Try login using given credentials"""
 
-        if not self._user_logged_in:
-            login_tab = self.browser.open(self.LOGIN_PAGE)
-
-            try:
-                self._attempt_login(login_tab)
-            except Exception as e:  # noqa
-                self.logger.info(f"{self.username} Login Attempt Failed")
-            else:
-                self._user_logged_in = True
-                self.logger.info(f"{self.username} Login Attempt successful")
-        else:
+        if self._user_logged_in:
             self.logger.info("User already logged in.")
+            return self._user_logged_in
+
+        login_tab = self.browser.open(self.LOGIN_PAGE)
+
+        try:
+            self._attempt_login(login_tab)
+            login_tab.wait_for_body_tag_presence_and_visibility()
+            login_tab.scroll(times=3)
+        except Exception as e:  # noqa
+            self.logger.exception(f"{self.username} Login attempt failed")
+        else:
+            login_tab.wait_for_url(self.USER_FEED_URL)
+            self._user_logged_in = self.USER_FEED_URL in login_tab.url
+            self.logger.info(f"{self.username} Login attempt {'successful' if self._user_logged_in else 'failed'}.")
 
         return self._user_logged_in
 
     def _attempt_login(self, login_tab):
-        username_input = login_tab.wait_for_presence_and_visibility(by=By.ID, key="username", wait=10)
-        password_input = login_tab.wait_for_presence_and_visibility(by=By.ID, key="password", wait=10)
-        submit_button = login_tab.wait_for_presence_and_visibility(by=By.CLASS_NAME, key="btn__primary--large", wait=10)
+        username_input = login_tab.jq("#username")
+        password_input = login_tab.jq("#password")
+        submit_button = login_tab.jq("button", first_match=True)
 
         username_input.send_keys(self.username)
         password_input.send_keys(self.password)
 
         login_tab.click(submit_button)
-        login_tab.wait_for_body_tag_presence_and_visibility()
-        login_tab.scroll(times=3)
 
-    @staticmethod
-    def get_user_preferences(preferred_users, not_preferred_users) -> (list, list):
-        if preferred_users and not isinstance(preferred_users, list):
-            if not Path(preferred_users).exists():
-                raise FileNotFoundError(f"File not found: {Path(preferred_users).absolute()}")
-
-            with open(preferred_users) as f:
-                users_preferred = f.readlines()
-        elif preferred_users:
-            users_preferred = preferred_users
-        else:
-            users_preferred = []
-
-        if not_preferred_users and not isinstance(not_preferred_users, list):
-            if not Path(not_preferred_users).exists():
-                raise FileNotFoundError(f"File not found: {Path(not_preferred_users).absolute()}")
-
-            with open(not_preferred_users) as f:
-                users_not_preferred = f.readlines()
-        elif not_preferred_users:
-            users_not_preferred = not_preferred_users
-        else:
-            users_not_preferred = []
-
-        preferred = [line.strip().lower() for line in users_preferred if line.strip()]
-        not_preferred = [line.strip().lower() for line in users_not_preferred if line.strip()]
-
-        return preferred, not_preferred
-
-    def get_connection_recommendation_cards(self) -> [Tab, list[dict]]:
+    def get_connection_recommendations(self) -> [Tab, list[dict]]:
         def convert_to_int(int_text: str):
             with suppress(Exception):
                 return int(int_text)
@@ -195,52 +146,76 @@ class LinkedIn(AbstractBaseLinkedin):
         networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
         networking_home_tab.wait_for_body_tag_presence_and_visibility(wait=5)
 
-        networking_home_tab.inject_jquery(by="file", wait=5)
         networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
 
-        user_connect_buttons = networking_home_tab.run_js(
-            script=f"""return $("span:contains('{connect_button_text}')")"""
-        )
+        user_connect_buttons = networking_home_tab.jq.find_elements_with_text(selector="span", text=connect_button_text)
 
         cards = []
 
         for connect_button in user_connect_buttons:
-            user_card = networking_home_tab.run_jquery(
-                script_code="""return $(arguments[0]).closest('li')""", element=connect_button
-            )
+            user_card = networking_home_tab.jq.find_closest_ancestor("li", connect_button)
 
-            name = networking_home_tab.run_jquery(
-                script_code=f"""return $(arguments[0]).find(".{name_class}").text()""", element=user_card
-            ).strip()
+            try:
+                name = networking_home_tab.jq(f".{name_class}", user_card, first_match=True).text.strip()
 
-            occupation = networking_home_tab.run_jquery(
-                script_code=f"""return $(arguments[0]).find(".{occupation_class}").text()""", element=user_card
-            ).strip()
+                occupation = networking_home_tab.jq(f".{occupation_class}", user_card, first_match=True).text.strip()
 
-            mutual_connections = networking_home_tab.run_jquery(
-                script_code=f"""return $(arguments[0]).find(".{connections_class}").text()""", element=user_card
-            ).strip()
+                mutual_connections = networking_home_tab.jq(
+                    f".{connections_class}", user_card, first_match=True
+                ).text.strip()
 
-            profile_link = networking_home_tab.run_jquery(
-                script_code="""return $(arguments[0]).find('a:first-of-type').attr('href')""", element=user_card
-            )
+                profile_link = networking_home_tab.jq("a", user_card, first_match=True).get_attribute("href").strip()
 
-            clickable_connect_button = networking_home_tab.run_jquery(
-                script_code="""return $(arguments[0]).closest('button')""", element=connect_button
-            )
+                clickable_connect_button = networking_home_tab.jq.find_closest_ancestor("button", connect_button)
 
-            if name and clickable_connect_button:
-                user = {
-                    "name": name,
-                    "profile_link": profile_link,
-                    "occupation": " ".join(occupation.lower().split()),
-                    "mutual_connections": convert_to_int(mutual_connections.strip("mutual connections").strip()),
-                    "connect_button": clickable_connect_button[0],
-                }
+                remove_connection_button = networking_home_tab.jq("button", user_card, first_match=True)
 
-                cards.append(user)
+                if name and clickable_connect_button:
+                    user = {
+                        "name": name,
+                        "profile_link": profile_link,
+                        "occupation": " ".join(occupation.lower().split()),
+                        "mutual_connections": convert_to_int(mutual_connections.strip("mutual connections").strip()),
+                        "connect_button": clickable_connect_button,
+                        "remove_connection_button": remove_connection_button,
+                    }
+
+                    cards.append(user)
+            except Exception as e:  # noqa
+                self.logger.exception("Could not find user details")
 
         return networking_home_tab, cards
+
+    def get_sent_invitations(self, sent_invitation_tab: Tab = None) -> (Tab, list[dict]):
+        def get_sent_time(button, tab) -> int:
+            return self._convert_invitation_sent_text_to_days(
+                tab.jq(
+                    selector=f"span.{sent_time_class}",
+                    element=tab.jq.find_closest_ancestor("li", button),
+                    first_match=True,
+                ).text.strip()
+            )
+
+        sent_invitation_tab = sent_invitation_tab or self.browser.open(self.NETWORK_SENT_INVITATIONS_PAGE)
+
+        sent_invitation_tab.scroll(times=10)
+
+        withdraw_invitation_button_text = "Withdraw"
+        sent_time_class = "time-badge"
+
+        withdraw_buttons = sent_invitation_tab.jq.find_elements_with_text(
+            selector="span", text=withdraw_invitation_button_text
+        )
+
+        sent_invitation_cards = [
+            {
+                "withdraw_button": withdraw_button,
+                "sent_time": get_sent_time(withdraw_button, sent_invitation_tab),
+            }
+            for withdraw_button in withdraw_buttons
+        ]
+
+        return sent_invitation_tab, sent_invitation_cards
 
     def send_invitations(
         self,
@@ -250,9 +225,16 @@ class LinkedIn(AbstractBaseLinkedin):
         view_profile: bool = True,
         preferred_users: list | os.PathLike | str = None,
         not_preferred_users: list | os.PathLike | str = None,
+        remove_recommendations: bool = False,
     ):
-        """
+        """Send Invitations based on set conditions.
 
+        Additionally and optionally, do the following:
+        - view profile of users you send request to
+        - remove recommendations who do not match the criteria
+
+
+        :param remove_recommendations:
         :param max_invitations:
         :param min_mutual:
         :param max_mutual:
@@ -262,7 +244,8 @@ class LinkedIn(AbstractBaseLinkedin):
         :return:
         """
 
-        users_preferred, users_not_preferred = self.get_user_preferences(preferred_users, not_preferred_users)
+        users_preferred = get_preferences(preferred_users)
+        users_not_preferred = get_preferences(not_preferred_users)
 
         if max_invitations <= 0:
             return 0
@@ -274,14 +257,18 @@ class LinkedIn(AbstractBaseLinkedin):
             if sent_invitation_count >= max_invitations:
                 break
 
-            networking_home_tab, user_cards = self.get_connection_recommendation_cards()
+            networking_home_tab, user_cards = self.get_connection_recommendations()
+
+            self.logger.info(f"Found a total of {len(user_cards)} connection recommendations.")
 
             valid_cards = [
                 card
                 for card in user_cards
                 if min_mutual <= card["mutual_connections"] <= max_mutual
-                and self.is_user_eligible(card, users_preferred, users_not_preferred)
+                and self._is_user_eligible(card, users_preferred, users_not_preferred)
             ]
+
+            self.logger.info(f"Filtered {len(valid_cards)} users recommendations based on set criteria.")
 
             for card in valid_cards:
                 connect_button = card["connect_button"]
@@ -289,20 +276,38 @@ class LinkedIn(AbstractBaseLinkedin):
                 try:
                     networking_home_tab.click(connect_button)
                 except Exception as e:  # noqa
-                    """Sometimes there is an exception when a user card is available multiple times on a page."""
+                    self.logger.exception(
+                        "Sometimes there is an exception when a user card is available multiple times on a page. "
+                        "Have a look!"
+                    )
                 else:
                     self.logger.info(f"Sent connection request to: {card}")
 
                     sent_invitation_count = sent_invitation_count + 1
 
                     if view_profile:
-                        self.view_profile(username_or_link=card["profile_link"])
+                        self.view_profile(username_or_link=card["profile_link"], close_tab=True)
                         networking_home_tab.switch()
 
                     humanized_wait(3)
 
                 if sent_invitation_count > max_invitations:
                     break
+
+            if remove_recommendations:
+                valid_cards = [
+                    card
+                    for card in user_cards
+                    if min_mutual <= card["mutual_connections"] <= max_mutual
+                    and not self._is_user_eligible(card, users_preferred, users_not_preferred)
+                ]
+
+                for card in valid_cards:
+                    remove_button = card["remove_connection_button"]
+
+                    with suppress(Exception):
+                        networking_home_tab.click(remove_button)
+                        humanized_wait(3)
 
         return sent_invitation_count
 
@@ -319,44 +324,18 @@ class LinkedIn(AbstractBaseLinkedin):
             _, accept = invitation_button.css("button")
             invitation_request_tab.click(accept)
 
-    @staticmethod
-    def get_sent_invitations(sent_invitation_tab) -> (Tab, list[dict]):
-        sent_invitation_tab.inject_jquery(by="file", wait=5)
-        sent_invitation_tab.scroll(times=10)
+            humanized_wait(3)
 
-        withdraw_invitation_button_text = "Withdraw"
-        sent_time_class = "time-badge"
+    def withdraw_sent_invitations(self, older_than_days: int = 10, max_remove=20) -> int:
+        """Withdraw invitations sent before this many days.
 
-        withdraw_buttons = sent_invitation_tab.run_js(
-            script=f"""
-                return $("span:contains('{withdraw_invitation_button_text}')")
-            """
-        )
-
-        sent_invitation_cards = [
-            {
-                "withdraw_button": withdraw_button,
-                "sent_time": sent_invitation_tab.run_jquery(
-                    f"""
-                        return $(arguments[0]).closest('li').find('span.{sent_time_class}').text()
-                    """,
-                    element=withdraw_button,
-                ).strip(),
-            }
-            for withdraw_button in withdraw_buttons
-        ]
-
-        return sent_invitation_tab, sent_invitation_cards
-
-    def remove_sent_invitations(self, older_than_days: int = 10, max_remove=20) -> int:
-        """
-
-        :param older_than_days: withdraw invitations with more than this many days
+        :param older_than_days: Withdraw invitations with more than this many days
         :param max_remove: maximum number of invitations to remove
-                         0 => all invitations matching the criteria
+                         (0 => all invitations matching the criteria)
         :return: Count of withdrawn invitations
         """
         sent_invitation_pagination_class_name = "mn-invitation-pagination"
+        withdraw_modal_confirm_class = "artdeco-modal"
         withdraw_invitation_button_modal_confirm_text = "Withdraw"
 
         number_of_removed_invitation = 0
@@ -367,45 +346,57 @@ class LinkedIn(AbstractBaseLinkedin):
         while True:
             _, sent_invitations = self.get_sent_invitations(sent_invitation_tab)
 
-            request_to_withdraw = [
-                invite
-                for invite in sent_invitations
-                if self.convert_invitation_sent_text_to_days(invitation_time=invite["sent_time"]) >= older_than_days
-            ]
+            request_to_withdraw = [invite for invite in sent_invitations if invite["sent_time"] > older_than_days]
 
             for sent_invitation in request_to_withdraw:
-                if number_of_removed_invitation > maximum_invitations_to_remove:
+                if number_of_removed_invitation >= maximum_invitations_to_remove:
                     break
 
                 sent_invitation_tab.click(sent_invitation["withdraw_button"])
 
-                withdrawal_confirm_modal_button = find_element_by_text(
-                    element=sent_invitation_tab.driver, text=withdraw_invitation_button_modal_confirm_text
+                withdrawal_confirm_modal_button = sent_invitation_tab.jq.find_elements_with_text(
+                    selector=f".{withdraw_modal_confirm_class} button",
+                    text=withdraw_invitation_button_modal_confirm_text,
+                    first_match=True,
                 )
 
                 sent_invitation_tab.click(withdrawal_confirm_modal_button)
 
-                sent_invitation_tab.wait_for_body_tag_presence_and_visibility(wait=self.MAX_WAIT_STALENESS)
-                sent_invitation_tab.wait_until_staleness(withdrawal_confirm_modal_button, wait=self.MAX_WAIT_STALENESS)
+                number_of_removed_invitation += 1
+
+                with suppress(Exception):
+                    # Weird: Sometimes, waiting for staleness raises StaleReference Exception :P
+
+                    sent_invitation_tab.wait_until_staleness(
+                        withdrawal_confirm_modal_button, wait=self.MAX_WAIT_STALENESS
+                    )
+                    sent_invitation_tab.wait_for_body_tag_presence_and_visibility(wait=self.MAX_WAIT_STALENESS)
 
                 humanized_wait(3)
 
-                number_of_removed_invitation += 1
-
-            if number_of_removed_invitation > maximum_invitations_to_remove:
+            if number_of_removed_invitation >= maximum_invitations_to_remove:
                 break
 
-            if not (pagination := sent_invitation_tab.css(f".{sent_invitation_pagination_class_name}")):
+            if not (
+                pagination := sent_invitation_tab.jq(
+                    selector=f".{sent_invitation_pagination_class_name}", first_match=True
+                )
+            ):
                 break
 
-            next_button = find_element_by_text(element=pagination[0], text="Next")
-            next_button = next_button.find_element(by=By.XPATH, value="..")
+            next_button = sent_invitation_tab.jq.parent(
+                sent_invitation_tab.jq.find_elements_with_text(text="Next", element=pagination, first_match=True)
+            )
 
             pagination_disabled_next_button_class_name = "artdeco-button--disabled"
 
-            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attribute(next_button, "class"):
+            if sent_invitation_tab.jq.has_class(
+                element=next_button, class_name=pagination_disabled_next_button_class_name
+            ):
                 sent_invitation_tab.click(next_button)
                 sent_invitation_tab.wait_for_body_tag_presence_and_visibility(wait=10)
+
+        self.logger.info(f"Withdrew {number_of_removed_invitation} invitations")
 
         return number_of_removed_invitation
 
@@ -424,26 +415,28 @@ class LinkedIn(AbstractBaseLinkedin):
 
         _, sent_invitations = self.get_sent_invitations(sent_invitation_tab)
 
-        last_week_invitations = len(
-            [
-                invite
-                for invite in sent_invitations
-                if self.convert_invitation_sent_text_to_days(invitation_time=invite["sent_time"]) <= 7
-            ]
-        )
+        last_week_invitations = len([invite for invite in sent_invitations if invite["sent_time"] <= 7])
 
-        if self.convert_invitation_sent_text_to_days(invitation_time=sent_invitations[-1]["sent_time"]) <= 7 and (
-            pagination := sent_invitation_tab.css(f".{sent_invitation_pagination_class_name}")
+        if (
+            sent_invitations
+            and sent_invitations[-1]["sent_time"] <= 7
+            and (pagination := sent_invitation_tab.jq(f".{sent_invitation_pagination_class_name}", first_match=True))
         ):
             pagination_next_button_text = "Next"
-            next_button = find_element_by_text(element=pagination[0], text=pagination_next_button_text)
-            next_button = next_button.find_element(by=By.XPATH, value="..")
+
+            next_button = sent_invitation_tab.jq.parent(
+                sent_invitation_tab.jq.find_elements_with_text(
+                    text=pagination_next_button_text, element=pagination, first_match=True
+                )
+            )
 
             pagination_disabled_next_button_class_name = "artdeco-button--disabled"
 
-            if pagination_disabled_next_button_class_name in sent_invitation_tab.get_attribute(next_button, "class"):
+            if sent_invitation_tab.jq.has_class(
+                element=next_button, class_name=pagination_disabled_next_button_class_name
+            ):
                 sent_invitation_tab.click(next_button)
-                sent_invitation_tab.wait_for_body_tag_presence_and_visibility()
+                sent_invitation_tab.wait_for_body_tag_presence_and_visibility(wait=10)
 
                 last_week_invitations += self.count_invitations_sent_last_week(
                     force_counting=force_counting,
@@ -465,12 +458,42 @@ class LinkedIn(AbstractBaseLinkedin):
         :return: None
         """
 
+        self.logger.info(f"Viewing profile of user: {username_or_link}")
+
         user_profile_link = (
             username_or_link if "/" in username_or_link else self.USER_PROFILE_PAGE.format(username=username)  # noqa
         )
         user_profile_tab = self.browser.open(user_profile_link)
         not close_tab and wait and humanized_wait(wait)
         close_tab and self.browser.close_tab(user_profile_tab)
+
+    def remove_recommendations(self, min_mutual: int, max_mutual: int, max_remove: int = None):
+        """Remove recommendations from the recommendation page.
+
+        Note that it takes some time for LinkedIn to remove (and refresh) recommendations
+        and removed recommendations may appear again.
+        """
+
+        recommendation_tab, suggestions = self.get_connection_recommendations()
+
+        self.logger.info(f"Found a total of {len(suggestions)} users recommendations")
+
+        valid_suggestions = [
+            suggestion for suggestion in suggestions if min_mutual < suggestion["mutual_connections"] < max_mutual
+        ][:max_remove]
+
+        self.logger.info(f"Filtered {len(valid_suggestions)} users recommendations based on set criteria.")
+
+        for suggestion in valid_suggestions:
+            remove_button = suggestion["remove_connection_button"]
+
+            recommendation_tab.click(remove_button)
+
+            humanized_wait(3)
+
+        self.logger.info(f"Removed {len(valid_suggestions)} recommendations")
+
+        return len(valid_suggestions)
 
     def smart_follow_unfollow(
         self,
@@ -480,11 +503,14 @@ class LinkedIn(AbstractBaseLinkedin):
         users_not_preferred: os.PathLike | str = None,
         withdraw_invite_older_than_days: int = 14,
         max_invitations_to_send: int = 0,
+        remove_recommendations: bool = True,
     ):
-        users_preferred, users_not_preferred = self.get_user_preferences(users_preferred, users_not_preferred)
+        users_preferred = get_preferences(users_preferred)
+        users_not_preferred = get_preferences(users_not_preferred)
 
         self.login()
-        self.remove_sent_invitations(older_than_days=withdraw_invite_older_than_days)
+
+        self.withdraw_sent_invitations(older_than_days=withdraw_invite_older_than_days)
 
         max_invitations_to_send = (
             min(max_invitations_to_send, self.WEEKLY_MAX_INVITATION)
@@ -498,6 +524,7 @@ class LinkedIn(AbstractBaseLinkedin):
             preferred_users=users_preferred,
             not_preferred_users=users_not_preferred,
             view_profile=True,
+            remove_recommendations=remove_recommendations,
         )
 
         self.accept_invitations()

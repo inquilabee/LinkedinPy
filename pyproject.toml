@@ -29,7 +29,7 @@ skip_glob = []
 
 [tool.poetry]
 name = "simplelinkedin"
-version = "1.4.1"
+version = "1.5.0"
 description = "Python package to automate activities on LinkedIn."
 authors = ["Vishal Kumar Mishra <vishal.k.mishra2@gmail.com>"]
 license = "MIT"
@@ -44,7 +44,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.10"
 selenium = "^4.12.0"
-simpleselenium = "0.4.1"
+simpleselenium = "0.4.2"
 django-environ = "^0.11.1"
 python-dotenv = "^1.0.0"
 PyYAML = "^6.0.1"

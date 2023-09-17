@@ -154,6 +154,7 @@ with LinkedIn(
         users_not_preferred=settings.LINKEDIN_NOT_PREFERRED_USER,
         max_invitations_to_send=settings.LINKEDIN_MAX_INVITE,
         withdraw_invite_older_than_days=settings.LINKEDIN_WITHDRAW_INVITE_BEFORE_DAYS,
+        remove_recommendations=True,
     )
 
 exit(0)
