@@ -1,4 +1,4 @@
-from linkedinpy.linkedin import LinkedIn
+from autolinkedin.linkedin import LinkedIn
 
 settings = {
     "LINKEDIN_USER": "",

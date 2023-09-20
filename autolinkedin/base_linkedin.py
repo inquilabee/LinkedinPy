@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from seleniumtabs import Browser
 
-from linkedinpy import settings
+from autolinkedin import settings
 
 
 class AbstractBaseLinkedin(ABC):

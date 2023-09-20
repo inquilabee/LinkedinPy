@@ -4,9 +4,9 @@ from contextlib import suppress
 from seleniumtabs import Tab
 from seleniumtabs.wait import humanized_wait
 
-from linkedinpy.base_linkedin import AbstractBaseLinkedin
-from linkedinpy.settings import getLogger
-from linkedinpy.utils.core import find_in_text, get_preferences
+from autolinkedin.base_linkedin import AbstractBaseLinkedin
+from autolinkedin.settings import getLogger
+from autolinkedin.utils.core import find_in_text, get_preferences
 
 
 class LinkedIn(AbstractBaseLinkedin):

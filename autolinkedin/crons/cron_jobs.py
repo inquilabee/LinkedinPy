@@ -3,7 +3,7 @@ from pathlib import Path
 
 from crontab import CronTab
 
-from linkedinpy.linkedin import LinkedIn
+from autolinkedin.linkedin import LinkedIn
 
 
 class LinkedInCron(LinkedIn):

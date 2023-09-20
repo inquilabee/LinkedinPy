@@ -1,6 +1,6 @@
-# SimpleLinkedIn
+# AutoLinkedIn
 
-Elevate your LinkedIn game with **SimpleLinkedIn**, a Python package designed for automating routine LinkedIn tasks. Whether you want to connect with specific users, manage connection requests, or optimize your LinkedIn networking, this package has you covered.
+Elevate your LinkedIn game with **AutoLinkedIn**, a Python package designed for automating routine LinkedIn tasks. Whether you want to connect with specific users, manage connection requests, or optimize your LinkedIn networking, this package has you covered.
 
 ### Key Features
 
@@ -11,22 +11,22 @@ Elevate your LinkedIn game with **SimpleLinkedIn**, a Python package designed fo
 - **Smart Follow-Unfollow**: Automatically manage connections, delete aged requests, and maximize your daily interactions within LinkedIn's limits.
 - **Background Mode**: Run all tasks in the background mode without interfering with your regular work.
 
-**Note**: **SimpleLinkedIn** has been tested on macOS and is expected to work on Linux/Unix environments as well. If you encounter any issues while running the scripts, feel free to raise an issue or submit a pull request.
+**Note**: **AutoLinkedIn** has been tested on macOS and is expected to work on Linux/Unix environments as well. If you encounter any issues while running the scripts, feel free to raise an issue or submit a pull request.
 
 ### Getting Started
 
-To get started with **SimpleLinkedIn**, first, install the package from PyPi using the following command:
+To get started with **AutoLinkedIn**, first, install the package from PyPi using the following command:
 
 ```bash
-pip install linkedinpy
+pip install autolinkedin
 ```
 
 Next, you can run and test the package by creating a script similar to `samplelinkedin/scripts/sample_script.py`. Start by running your script with `LINKEDIN_BROWSER_HEADLESS=0` to ensure everything works as expected. Once you're confident, switch to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
 
-Here's a simplified example of running **SimpleLinkedIn**:
+Here's a simplified example of running **AutoLinkedIn**:
 
 ```python
-from linkedinpy.linkedin import LinkedIn
+from autolinkedin.linkedin import LinkedIn
 
 settings = {
     "LINKEDIN_USER": "<your_username>",
@@ -75,41 +75,41 @@ with LinkedIn(
 
 ### Command Line Usage
 
-**SimpleLinkedIn** provides a convenient command-line interface for easy interaction. You can execute tasks directly from the command line with options like:
+**AutoLinkedIn** provides a convenient command-line interface for easy interaction. You can execute tasks directly from the command line with options like:
 
 ```bash
-python -m linkedinpy -h
+python -m autolinkedin -h
 ```
 
 This command will display a list of available options, allowing you to configure and execute LinkedIn tasks without writing scripts.
 
 ### Setting Up Cron Jobs
 
-To schedule recurring tasks, you can set up cron jobs using **SimpleLinkedIn**. Here's how:
+To schedule recurring tasks, you can set up cron jobs using **AutoLinkedIn**. Here's how:
 
 1. Start with the following commands. (Use `example.env` as a reference while setting `.env` values)
 
 ```bash
-python -m linkedinpy --env .env
+python -m autolinkedin --env .env
 ```
 
 2. You can supply `--rmcron` to remove existing cron jobs:
 
 ```bash
-python -m linkedinpy --rmcron --cronuser osuser
+python -m autolinkedin --rmcron --cronuser osuser
 ```
 
 3. To create a new cron job, specify the desired settings:
 
 ```bash
-python -m linkedinpy --cronfile .cron.env --cronuser osuser --cronhour 23
+python -m autolinkedin --cronfile .cron.env --cronuser osuser --cronhour 23
 ```
 
 These cron jobs enable you to automate your LinkedIn tasks at specific times, enhancing your networking efficiency.
 
 ### Extras
 
-**LinkedInPy** heavily relies on another package named [SeleniumTabs](https://github.com/inquilabee/selenium-tabs). Feel free to explore that package for additional functionality.
+**AutoLinkedIn** heavily relies on another package named [SeleniumTabs](https://github.com/inquilabee/selenium-tabs). Feel free to explore that package for additional functionality.
 
 ### TODOs
 
