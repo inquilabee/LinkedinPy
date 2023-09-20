@@ -1,4 +1,4 @@
-from simplelinkedin.linkedin import LinkedIn
+from linkedinpy.linkedin import LinkedIn
 
 settings = {
     "LINKEDIN_USER": "",

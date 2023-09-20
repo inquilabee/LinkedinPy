@@ -1,9 +1,9 @@
 import argparse
 import os
 
-from simplelinkedin.crons.cron_jobs import LinkedInCron
-from simplelinkedin.linkedin import LinkedIn
-from simplelinkedin.ln_settings import LinkedInCommandArgs, LinkedInSettingsName, get_linkedin_settings
+from linkedinpy.crons.cron_jobs import LinkedInCron
+from linkedinpy.linkedin import LinkedIn
+from linkedinpy.ln_settings import LinkedInCommandArgs, LinkedInSettingsName, get_linkedin_settings
 
 parser = argparse.ArgumentParser()
 

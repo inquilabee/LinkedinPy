@@ -18,7 +18,7 @@ Elevate your LinkedIn game with **SimpleLinkedIn**, a Python package designed fo
 To get started with **SimpleLinkedIn**, first, install the package from PyPi using the following command:
 
 ```bash
-pip install simplelinkedin
+pip install linkedinpy
 ```
 
 Next, you can run and test the package by creating a script similar to `samplelinkedin/scripts/sample_script.py`. Start by running your script with `LINKEDIN_BROWSER_HEADLESS=0` to ensure everything works as expected. Once you're confident, switch to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
@@ -26,7 +26,7 @@ Next, you can run and test the package by creating a script similar to `sampleli
 Here's a simplified example of running **SimpleLinkedIn**:
 
 ```python
-from simplelinkedin.linkedin import LinkedIn
+from linkedinpy.linkedin import LinkedIn
 
 settings = {
     "LINKEDIN_USER": "<your_username>",
@@ -49,7 +49,7 @@ with LinkedIn(
     last_week_invitations = ln.count_invitations_sent_last_week()
 
     ln.send_invitations(
-        max_invitations=max(ln.WEEKLY_MAX_INVITATION - last_week_invitations , 0),
+        max_invitations=max(ln.WEEKLY_MAX_INVITATION - last_week_invitations, 0),
         min_mutual=10,
         max_mutual=450,
         preferred_users=["Quant"],  # file_path or list of features
@@ -78,7 +78,7 @@ with LinkedIn(
 **SimpleLinkedIn** provides a convenient command-line interface for easy interaction. You can execute tasks directly from the command line with options like:
 
 ```bash
-python -m simplelinkedin -h
+python -m linkedinpy -h
 ```
 
 This command will display a list of available options, allowing you to configure and execute LinkedIn tasks without writing scripts.
@@ -90,26 +90,26 @@ To schedule recurring tasks, you can set up cron jobs using **SimpleLinkedIn**. 
 1. Start with the following commands. (Use `example.env` as a reference while setting `.env` values)
 
 ```bash
-python -m simplelinkedin --env .env
+python -m linkedinpy --env .env
 ```
 
 2. You can supply `--rmcron` to remove existing cron jobs:
 
 ```bash
-python -m simplelinkedin --rmcron --cronuser osuser
+python -m linkedinpy --rmcron --cronuser osuser
 ```
 
 3. To create a new cron job, specify the desired settings:
 
 ```bash
-python -m simplelinkedin --cronfile .cron.env --cronuser osuser --cronhour 23
+python -m linkedinpy --cronfile .cron.env --cronuser osuser --cronhour 23
 ```
 
 These cron jobs enable you to automate your LinkedIn tasks at specific times, enhancing your networking efficiency.
 
 ### Extras
 
-**SimpleLinkedIn** heavily relies on another package named [SimpleSelenium](https://github.com/inquilabee/simpleselenium). Feel free to explore that package for additional functionality.
+**LinkedInPy** heavily relies on another package named [SeleniumTabs](https://github.com/inquilabee/selenium-tabs). Feel free to explore that package for additional functionality.
 
 ### TODOs
 

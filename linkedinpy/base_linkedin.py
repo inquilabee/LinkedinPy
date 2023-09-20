@@ -1,9 +1,9 @@
 import os
 from abc import ABC, abstractmethod
 
-from simpleselenium import Browser
+from seleniumtabs import Browser
 
-from simplelinkedin import settings
+from linkedinpy import settings
 
 
 class AbstractBaseLinkedin(ABC):

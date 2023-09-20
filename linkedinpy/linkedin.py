@@ -1,12 +1,12 @@
 import os
 from contextlib import suppress
 
-from simpleselenium import Tab
-from simpleselenium.wait import humanized_wait
+from seleniumtabs import Tab
+from seleniumtabs.wait import humanized_wait
 
-from simplelinkedin.base_linkedin import AbstractBaseLinkedin
-from simplelinkedin.settings import getLogger
-from simplelinkedin.utils.core import find_in_text, get_preferences
+from linkedinpy.base_linkedin import AbstractBaseLinkedin
+from linkedinpy.settings import getLogger
+from linkedinpy.utils.core import find_in_text, get_preferences
 
 
 class LinkedIn(AbstractBaseLinkedin):
