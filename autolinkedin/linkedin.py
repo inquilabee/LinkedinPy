@@ -9,6 +9,10 @@ from autolinkedin.settings import getLogger
 from autolinkedin.utils.core import find_in_text, get_preferences
 
 
+class LinkedInLoginError(Exception):
+    ...
+
+
 class LinkedIn(AbstractBaseLinkedin):
     HOME_PAGE = "https://www.linkedin.com/feed/"
     LOGIN_PAGE = "https://www.linkedin.com/login"
@@ -116,6 +120,9 @@ class LinkedIn(AbstractBaseLinkedin):
             login_tab.wait_for_url(self.USER_FEED_URL)
             self._user_logged_in = self.USER_FEED_URL in login_tab.url
             self.logger.info(f"{self.username} Login attempt {'successful' if self._user_logged_in else 'failed'}.")
+
+        if not self._user_logged_in:
+            raise LinkedInLoginError("Could not login.")
 
         return self._user_logged_in
 
@@ -499,8 +506,8 @@ class LinkedIn(AbstractBaseLinkedin):
         self,
         min_mutual: int = 0,
         max_mutual: int = 500,
-        users_preferred: os.PathLike | str = None,
-        users_not_preferred: os.PathLike | str = None,
+        users_preferred: os.PathLike | str | list = None,
+        users_not_preferred: os.PathLike | str | list = None,
         withdraw_invite_older_than_days: int = 14,
         max_invitations_to_send: int = 0,
         remove_recommendations: bool = True,

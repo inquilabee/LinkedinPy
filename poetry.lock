@@ -1385,13 +1385,13 @@ urllib3 = {version = ">=1.26,<3", extras = ["socks"]}
 
 [[package]]
 name = "seleniumtabs"
-version = "0.4.4"
+version = "0.4.5"
 description = "Selenium with tab management in Python"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "seleniumtabs-0.4.4-py3-none-any.whl", hash = "sha256:c24098a7cf3fa7a8974a30357d0506ce1272e8c8aa06f37a82d1832ed42d2710"},
-    {file = "seleniumtabs-0.4.4.tar.gz", hash = "sha256:e25c2c3c23fc4f94315f2c1454d711c8f64df8e5a5b8128bdce3988b525f3806"},
+    {file = "seleniumtabs-0.4.5-py3-none-any.whl", hash = "sha256:52c501cf53388f952f073f8aac3ac2313389e4df052aaeeb6d0609461cc75344"},
+    {file = "seleniumtabs-0.4.5.tar.gz", hash = "sha256:07d9db06905453d64cb285e2819cdcd595d79feefbbba429ca39e867409edb21"},
 ]
 
 [package.dependencies]
@@ -1735,4 +1735,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "690f5626a3dead45f4f5aa186142abd1521763009edb525b414ce1694a5b776a"
+content-hash = "f4c4087c4e95c30fa35963a223de63135ab090b1c38af3516bd62846f5c625f5"

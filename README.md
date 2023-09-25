@@ -21,27 +21,19 @@ To get started with **AutoLinkedIn**, first, install the package from PyPi using
 pip install autolinkedin
 ```
 
-Next, you can run and test the package by creating a script similar to `samplelinkedin/scripts/sample_script.py`. Start by running your script with `LINKEDIN_BROWSER_HEADLESS=0` to ensure everything works as expected. Once you're confident, switch to `LINKEDIN_BROWSER_HEADLESS=1` to run your script in the background.
+Next, you can run and test the package by creating a script similar to `autolinkedin/scripts/sample_script.py`. Start by running your script with `headless=False` to ensure everything works as expected. Once you're confident, switch to `headless=True` to run your script in the background.
 
 Here's a simplified example of running **AutoLinkedIn**:
 
 ```python
 from autolinkedin.linkedin import LinkedIn
 
-settings = {
-    "LINKEDIN_USER": "<your_username>",
-    "LINKEDIN_PASSWORD": "<your_password>",
-    "LINKEDIN_BROWSER": "Chrome",
-    "LINKEDIN_BROWSER_HEADLESS": 0,
-    "LINKEDIN_PREFERRED_USER": "/path/to/preferred/user/text_doc.text",
-    "LINKEDIN_NOT_PREFERRED_USER": "/path/to/not/preferred/user/text_doc.text",
-}
 
 with LinkedIn(
-        username=settings.get("LINKEDIN_USER"),
-        password=settings.get("LINKEDIN_PASSWORD"),
-        browser=settings.get("LINKEDIN_BROWSER"),
-        headless=bool(settings.get("LINKEDIN_BROWSER_HEADLESS")),
+        username="<username/email>",
+        password="<pas$word>",
+        browser="<Chrome/Firefox>",
+        headless="<True/False>",
 ) as ln:
     # Perform LinkedIn actions here
     ln.login()
@@ -52,8 +44,8 @@ with LinkedIn(
         max_invitations=max(ln.WEEKLY_MAX_INVITATION - last_week_invitations, 0),
         min_mutual=10,
         max_mutual=450,
-        preferred_users=["Quant"],  # file_path or list of features
-        not_preferred_users=["Sportsman"],  # file_path or list of features
+        preferred_users=["Quant", "Software"],  # file_path or list of features
+        not_preferred_users=["Sportsman", "Doctor"],  # file_path or list of features
         view_profile=True,  # (recommended) view profile of users you sent connection requests to
     )
 
@@ -68,9 +60,14 @@ with LinkedIn(
         max_mutual=500,
         withdraw_invite_older_than_days=14,
         max_invitations_to_send=0,
-        users_preferred=settings.get("LINKEDIN_PREFERRED_USER") or [],
-        users_not_preferred=settings.get("LINKEDIN_NOT_PREFERRED_USER") or [],
+        users_preferred=["Quant"],  # file_path or list of features
+        users_not_preferred=["Sportsman"],  # file_path or list of features
+        remove_recommendations=True, # remove recommendations which do not match criteria
     )
+
+    # Additional method
+
+    ln.remove_recommendations(min_mutual=10, max_mutual=500)
 ```
 
 ### Command Line Usage
@@ -82,6 +79,37 @@ python -m autolinkedin -h
 ```
 
 This command will display a list of available options, allowing you to configure and execute LinkedIn tasks without writing scripts.
+
+```bash
+> python -m autolinkedin -h
+usage: autolinkedin [-h] [--env ENV] [--email EMAIL] [--password PASSWORD] [--browser BROWSER] [--headless] [--maxinvite MAXINVITE] [--minmutual MINMUTUAL] [--maxmutual MAXMUTUAL] [--withdrawdays WITHDRAWDAYS]
+                   [--preferred PREFERRED] [--notpreferred NOTPREFERRED] [--cronfile CRONFILE] [--cronuser CRONUSER] [--rmcron | --no-rmcron] [--cronhour CRONHOUR]
+
+options:
+  -h, --help            show this help message and exit
+  --env ENV             Linkedin environment file
+  --email EMAIL         Email of LinkedIn user
+  --password PASSWORD   Password of LinkedIn user
+  --browser BROWSER     Browser used for LinkedIn
+  --headless            Whether to run headless (i.e. without the browser visible in the front.)
+  --maxinvite MAXINVITE
+                        Maximum number of invitations to send
+  --minmutual MINMUTUAL
+                        Minimum number of mutual connections required.
+  --maxmutual MAXMUTUAL
+                        Maximum number of mutual connections required.
+  --withdrawdays WITHDRAWDAYS
+                        Withdraw invites older than this many days
+  --preferred PREFERRED
+                        Path to file containing preferred users characteristics
+  --notpreferred NOTPREFERRED
+                        Path to file containing characteristics of not preferred users
+  --cronfile CRONFILE   Path to cronfile
+  --cronuser CRONUSER   Name of user setting cron on the machine (needed by most OS)
+  --rmcron, --no-rmcron
+                        Whether to remove existing crons.
+  --cronhour CRONHOUR   hour of the day you want to set cron for each day.
+```
 
 ### Setting Up Cron Jobs
 
@@ -109,7 +137,7 @@ These cron jobs enable you to automate your LinkedIn tasks at specific times, en
 
 ### Extras
 
-**AutoLinkedIn** heavily relies on another package named [SeleniumTabs](https://github.com/inquilabee/selenium-tabs). Feel free to explore that package for additional functionality.
+**AutoLinkedIn** heavily relies on another package I authored named [SeleniumTabs](https://github.com/inquilabee/selenium-tabs). Feel free to explore that package for additional functionality.
 
 ### TODOs
 
