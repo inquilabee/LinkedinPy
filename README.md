@@ -49,6 +49,8 @@ with LinkedIn(
         view_profile=True,  # (recommended) view profile of users you sent connection requests to
     )
 
+    ln.withdraw_sent_invitations(older_than_days=14)
+
     ln.accept_invitations()
 
     # Customize your actions as needed
@@ -66,7 +68,6 @@ with LinkedIn(
     )
 
     # Additional method
-
     ln.remove_recommendations(min_mutual=10, max_mutual=500)
 ```
 
