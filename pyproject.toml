@@ -29,7 +29,7 @@ skip_glob = []
 
 [tool.poetry]
 name = "autolinkedin"
-version = "1.5.2"
+version = "1.5.3"
 packages = [
     { include = "autolinkedin" },
 ]
@@ -39,7 +39,7 @@ license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/inquilabee/LinkedinPy"
 repository = "https://github.com/inquilabee/LinkedinPy"
-keywords = ["linkedin", "simplelinkedin", "selenium", "linkedin automation"]
+keywords = ["linkedin", "autolinkedin", "selenium", "linkedin automation"]
 include = [
     "LICENSE",
 ]
@@ -47,7 +47,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.10"
 selenium = "^4.12.0"
-seleniumtabs = "^0.4.5"
+seleniumtabs = "^0.4.6"
 django-environ = "^0.11.1"
 python-dotenv = "^1.0.0"
 PyYAML = "^6.0.1"

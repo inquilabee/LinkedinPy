@@ -136,7 +136,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         login_tab.click(submit_button)
 
-    def get_connection_recommendations(self) -> [Tab, list[dict]]:
+    def get_connection_recommendations(self) -> tuple[Tab, list[dict]]:
         def convert_to_int(int_text: str):
             with suppress(Exception):
                 return int(int_text)
@@ -203,7 +203,7 @@ class LinkedIn(AbstractBaseLinkedin):
                 ).text.strip()
             )
 
-        sent_invitation_tab = sent_invitation_tab or self.browser.open(self.NETWORK_SENT_INVITATIONS_PAGE)
+        sent_invitation_tab: Tab = sent_invitation_tab or self.browser.open(self.NETWORK_SENT_INVITATIONS_PAGE)
 
         sent_invitation_tab.scroll(times=10)
 
@@ -233,6 +233,7 @@ class LinkedIn(AbstractBaseLinkedin):
         preferred_users: list | os.PathLike | str = None,
         not_preferred_users: list | os.PathLike | str = None,
         remove_recommendations: bool = False,
+        close_profile_tab: bool = False,
     ):
         """Send Invitations based on set conditions.
 
@@ -241,8 +242,9 @@ class LinkedIn(AbstractBaseLinkedin):
         - remove recommendations who do not match the criteria
 
 
-        :param remove_recommendations:
-        :param max_invitations:
+        :param close_profile_tab: Whether to close the profile tab of users we sent request to
+        :param remove_recommendations: Whether to remove recommendation which does not meet criteria
+        :param max_invitations: maximum invitations to send
         :param min_mutual:
         :param max_mutual:
         :param view_profile:
@@ -257,8 +259,7 @@ class LinkedIn(AbstractBaseLinkedin):
         if max_invitations <= 0:
             return 0
 
-        sent_invitation_count = 0
-        retry_times = 5
+        sent_invitation_count, retry_times = 0, 5
 
         for _ in range(retry_times):
             if sent_invitation_count >= max_invitations:
@@ -268,12 +269,14 @@ class LinkedIn(AbstractBaseLinkedin):
 
             self.logger.info(f"Found a total of {len(user_cards)} connection recommendations.")
 
-            valid_cards = [
-                card
+            all_cards = [
+                (card, self._is_user_eligible(card, users_preferred, users_not_preferred))
                 for card in user_cards
                 if min_mutual <= card["mutual_connections"] <= max_mutual
-                and self._is_user_eligible(card, users_preferred, users_not_preferred)
             ]
+
+            valid_cards = [card for card, status in all_cards if status]
+            invalid_cards = [card for card, status in all_cards if not status]
 
             self.logger.info(f"Filtered {len(valid_cards)} users recommendations based on set criteria.")
 
@@ -284,7 +287,7 @@ class LinkedIn(AbstractBaseLinkedin):
                     networking_home_tab.click(connect_button)
                 except Exception as e:  # noqa
                     self.logger.exception(
-                        "Sometimes there is an exception when a user card is available multiple times on a page. "
+                        "Sometimes, there is an exception when a user card is available multiple times on a page. "
                         "Have a look!"
                     )
                 else:
@@ -292,31 +295,29 @@ class LinkedIn(AbstractBaseLinkedin):
 
                     sent_invitation_count = sent_invitation_count + 1
 
-                    if view_profile:
-                        self.view_profile(username_or_link=card["profile_link"], close_tab=True)
-                        networking_home_tab.switch()
+                    view_profile and self.view_profile(
+                        username_or_link=card["profile_link"], close_tab=close_profile_tab
+                    )
+
+                    networking_home_tab.switch()
 
                     humanized_wait(3)
 
-                if sent_invitation_count > max_invitations:
+                if sent_invitation_count >= max_invitations:
                     break
 
-            if remove_recommendations:
-                valid_cards = [
-                    card
-                    for card in user_cards
-                    if min_mutual <= card["mutual_connections"] <= max_mutual
-                    and not self._is_user_eligible(card, users_preferred, users_not_preferred)
-                ]
-
-                for card in valid_cards:
-                    remove_button = card["remove_connection_button"]
-
-                    with suppress(Exception):
-                        networking_home_tab.click(remove_button)
-                        humanized_wait(3)
+            remove_recommendations and self._delete_not_matching_recommendations(networking_home_tab, invalid_cards)
 
         return sent_invitation_count
+
+    @staticmethod
+    def _delete_not_matching_recommendations(tab: Tab, user_cards):
+        for card in user_cards:
+            remove_button = card["remove_connection_button"]
+
+            with suppress(Exception):
+                if tab.click(remove_button):
+                    humanized_wait(3)
 
     def accept_invitations(self):
         invitation_card_actions = "invitation-card__action-container"
