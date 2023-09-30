@@ -32,6 +32,9 @@ class AbstractBaseLinkedin(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.browser.close()
 
+    def __del__(self):
+        self.browser.close()
+
     @property
     def tabs(self):
         return self.browser.tabs

@@ -10,6 +10,7 @@ Elevate your LinkedIn game with **AutoLinkedIn**, a Python package designed for 
 - **Delete/Withdraw Sent Requests**: Keep your connection list clean by removing outdated sent requests.
 - **Smart Follow-Unfollow**: Automatically manage connections, delete aged requests, and maximize your daily interactions within LinkedIn's limits.
 - **Background Mode**: Run all tasks in the background mode without interfering with your regular work.
+- **Search**: Search for people.
 
 **Note**: **AutoLinkedIn** has been tested on macOS and is expected to work on Linux/Unix environments as well. If you encounter any issues while running the scripts, feel free to raise an issue or submit a pull request.
 
@@ -69,6 +70,9 @@ with LinkedIn(
 
     # Additional method
     ln.remove_recommendations(min_mutual=10, max_mutual=500)
+
+    # Search for people
+    ln.search_people("Microsoft Recruiter")
 ```
 
 ### Command Line Usage
@@ -139,6 +143,21 @@ These cron jobs enable you to automate your LinkedIn tasks at specific times, en
 ### Extras
 
 **AutoLinkedIn** heavily relies on another package I authored named [SeleniumTabs](https://github.com/inquilabee/selenium-tabs). Feel free to explore that package for additional functionality.
+
+### example.env
+
+```bash
+LINKEDIN_USER=
+LINKEDIN_PASSWORD=
+LINKEDIN_BROWSER=Chrome
+LINKEDIN_BROWSER_HEADLESS=1
+LINKEDIN_PREFERRED_USER=data/users_preferred.txt
+LINKEDIN_NOT_PREFERRED_USER=data/users_not_preferred.txt
+LINKEDIN_MIN_MUTUAL=0
+LINKEDIN_MAX_MUTUAL=500
+LINKEDIN_MAX_INVITE=0
+LINKEDIN_WITHDRAW_INVITE_BEFORE_DAYS=14
+```
 
 ### TODOs
 

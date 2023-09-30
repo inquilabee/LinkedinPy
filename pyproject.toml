@@ -29,7 +29,7 @@ skip_glob = []
 
 [tool.poetry]
 name = "autolinkedin"
-version = "1.5.3"
+version = "1.6.0"
 packages = [
     { include = "autolinkedin" },
 ]

@@ -1,0 +1,6 @@
+class LinkedInLoginError(Exception):
+    ...
+
+
+class InvalidConnection(Exception):
+    ...

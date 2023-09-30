@@ -5,12 +5,9 @@ from seleniumtabs import Tab
 from seleniumtabs.wait import humanized_wait
 
 from autolinkedin.base_linkedin import AbstractBaseLinkedin
+from autolinkedin.exceptions import InvalidConnection, LinkedInLoginError
 from autolinkedin.settings import getLogger
 from autolinkedin.utils.core import find_in_text, get_preferences
-
-
-class LinkedInLoginError(Exception):
-    ...
 
 
 class LinkedIn(AbstractBaseLinkedin):
@@ -21,6 +18,12 @@ class LinkedIn(AbstractBaseLinkedin):
     NETWORK_SENT_INVITATIONS_PAGE = "https://www.linkedin.com/mynetwork/invitation-manager/sent/"
     USER_PROFILE_PAGE = "https://www.linkedin.com/in/{username}/"
     USER_FEED_URL = "https://www.linkedin.com/feed/"
+    PEOPLE_SEARCH_URL = (
+        "https://www.linkedin.com/search/results/people/"
+        "?keywords={words}"
+        "&network={connections}"
+        "&page={page_number}"
+    )
 
     MAX_WAIT_STALENESS = 10
 
@@ -122,7 +125,7 @@ class LinkedIn(AbstractBaseLinkedin):
             self.logger.info(f"{self.username} Login attempt {'successful' if self._user_logged_in else 'failed'}.")
 
         if not self._user_logged_in:
-            raise LinkedInLoginError("Could not login.")
+            raise LinkedInLoginError("Could not login. Check your credentials and try again.")
 
         return self._user_logged_in
 
@@ -502,6 +505,69 @@ class LinkedIn(AbstractBaseLinkedin):
         self.logger.info(f"Removed {len(valid_suggestions)} recommendations")
 
         return len(valid_suggestions)
+
+    def search_people(self, search_term: str, connections: int | list[int] = 2, page_number: int = 1) -> dict:
+        if isinstance(connections, int):
+            connections = [connections]
+
+        connection_str = {1: '"F"', 2: '"S"', 3: '"O"'}
+
+        for connection in connections:
+            if connection not in [1, 2, 3]:
+                raise InvalidConnection(f"Please check connection values. Allowed: {connection_str}")  # noqa
+
+        network = "[" + ",".join([connection_str[connection] for connection in connections]) + "]"
+
+        search_url = self.PEOPLE_SEARCH_URL.format(  # noqa
+            words=search_term, connections=network, page_number=page_number
+        )
+
+        self.logger.debug(f"Searching url: {search_url}")
+
+        search_tab = self.browser.open(search_url)
+        search_tab.scroll()
+
+        search_result_class = "reusable-search__result-container"
+        title_class = "entity-result__title-text"
+        primary_subtitle_class = "entity-result__primary-subtitle"
+        pagination_class = "artdeco-pagination__pages"
+
+        search_result = []
+
+        for res in search_tab.jq(selector=f".{search_result_class}"):
+            with suppress(Exception):
+                name = search_tab.jq(selector=f".{title_class} a span span", element=res, first_match=True).text
+                profile_link = search_tab.get_attribute(
+                    element=search_tab.jq(selector=f".{title_class} a", element=res, first_match=True), attr_name="href"
+                ).split("?")[0]
+                occupation = search_tab.jq(selector=f".{primary_subtitle_class}", element=res, first_match=True).text
+                connect_button = search_tab.jq(selector="button", element=res, first_match=True)
+
+                search_result.append(
+                    {
+                        "name": name,
+                        "occupation": occupation,
+                        "profile_link": profile_link,
+                        "connect_button": connect_button,
+                    }
+                )
+
+        result = {"items": search_result}
+
+        if pagination := search_tab.jq(f".{pagination_class}"):
+            current_page = search_tab.jq("li.active", pagination, first_match=True)
+            total_pages = search_tab.jq("li", pagination)[-1].text.strip()
+
+            pagination_next_button_class = "artdeco-pagination__button--next"
+
+            next_page = search_tab.jq(f"button.{pagination_next_button_class}", first_match=True)
+            disabled_next_button_class = "artdeco-button--disabled"
+
+            has_more = not search_tab.jq.has_class(element=next_page, class_name=disabled_next_button_class)
+
+            result |= {"current_page": current_page.text.strip(), "total_pages": total_pages, "has_more": has_more}
+
+        return result
 
     def smart_follow_unfollow(
         self,
