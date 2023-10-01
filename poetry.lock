@@ -469,6 +469,17 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
+name = "fake-useragent"
+version = "1.2.1"
+description = "Up-to-date simple useragent faker with real world database"
+optional = false
+python-versions = "*"
+files = [
+    {file = "fake-useragent-1.2.1.tar.gz", hash = "sha256:b411f903331f695e3840ccadcf011f745a405764e97c588f2b8fde9e400a5446"},
+    {file = "fake_useragent-1.2.1-py3-none-any.whl", hash = "sha256:ad2b5414d19493d0789572f04200d4f656f84d20b205cc805233212957fe385d"},
+]
+
+[[package]]
 name = "filelock"
 version = "3.12.3"
 description = "A platform independent file lock."
@@ -1385,18 +1396,19 @@ urllib3 = {version = ">=1.26,<3", extras = ["socks"]}
 
 [[package]]
 name = "seleniumtabs"
-version = "0.4.6"
+version = "0.5.0"
 description = "Selenium with tab management in Python"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "seleniumtabs-0.4.6-py3-none-any.whl", hash = "sha256:629e0f2ad70a32151f97e56aa48c7591e32b9e9ac4bfb5918b704ff4aad1301f"},
-    {file = "seleniumtabs-0.4.6.tar.gz", hash = "sha256:f31850302272d5e5f72b81db0918b68fb7d44aff47f524287e92210d1a788e65"},
+    {file = "seleniumtabs-0.5.0-py3-none-any.whl", hash = "sha256:dfe1740871252555c0a45fa0fef21d3aca3f11b7f8db3faef6dbdf7394d41e59"},
+    {file = "seleniumtabs-0.5.0.tar.gz", hash = "sha256:279bdc405d775d78e802021bb5f658ebeb64bbb312781c0db5ffeb9090c57f51"},
 ]
 
 [package.dependencies]
 browserjquery = ">=0.1.0,<0.2.0"
 django-environ = ">=0.11.1,<0.12.0"
+fake-useragent = ">=1.2.1,<2.0.0"
 pyquery = ">=2.0.0,<3.0.0"
 python-dotenv = ">=1.0.0,<2.0.0"
 PyYAML = ">=6.0.1,<7.0.0"
@@ -1735,4 +1747,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3fbd663012590e57a8c260e1ec6f0c662b99c78fe736fc6330853b3cd12159c2"
+content-hash = "cf1fb5e103ef7de2cabcc8add4e3010a51201001e2a8119b8a65f486f2e4341e"

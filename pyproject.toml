@@ -47,7 +47,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.10"
 selenium = "^4.12.0"
-seleniumtabs = "^0.4.6"
+seleniumtabs = "^0.5.0"
 django-environ = "^0.11.1"
 python-dotenv = "^1.0.0"
 PyYAML = "^6.0.1"
