@@ -115,7 +115,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         try:
             self._attempt_login(login_tab)
-            login_tab.wait_for_body_tag_presence_and_visibility()
+            login_tab.wait_for_body_tag_presence_and_visibility(10)
             login_tab.scroll(times=3)
         except Exception as e:  # noqa
             self.logger.exception(f"{self.username} Login attempt failed")
@@ -125,7 +125,7 @@ class LinkedIn(AbstractBaseLinkedin):
             self.logger.info(f"{self.username} Login attempt {'successful' if self._user_logged_in else 'failed'}.")
 
         if not self._user_logged_in:
-            raise LinkedInLoginError("Could not login. Check your credentials and try again.")
+            raise LinkedInLoginError("Unexpected error occured! Could not login. Check your credentials and try again.")
 
         return self._user_logged_in
 
@@ -237,7 +237,7 @@ class LinkedIn(AbstractBaseLinkedin):
         not_preferred_users: list | os.PathLike | str = None,
         remove_recommendations: bool = False,
         close_profile_tab: bool = False,
-    ):
+    ) -> int:
         """Send Invitations based on set conditions.
 
         Additionally and optionally, do the following:
@@ -281,7 +281,8 @@ class LinkedIn(AbstractBaseLinkedin):
             valid_cards = [card for card, status in all_cards if status]
             invalid_cards = [card for card, status in all_cards if not status]
 
-            self.logger.info(f"Filtered {len(valid_cards)} users recommendations based on set criteria.")
+            self.logger.info(f"Filtered {len(valid_cards)} valid users recommendations based on set criteria.")
+            self.logger.info(f"Filtered {len(invalid_cards)} invalid users recommendations based on set criteria.")
 
             for card in valid_cards:
                 connect_button = card["connect_button"]
@@ -395,8 +396,8 @@ class LinkedIn(AbstractBaseLinkedin):
             ):
                 break
 
-            next_button = sent_invitation_tab.jq.parent(
-                sent_invitation_tab.jq.find_elements_with_text(text="Next", element=pagination, first_match=True)
+            next_button = sent_invitation_tab.jq.find_elements_with_text(
+                text="Next", element=pagination, first_match=True
             )
 
             pagination_disabled_next_button_class_name = "artdeco-button--disabled"
@@ -404,8 +405,10 @@ class LinkedIn(AbstractBaseLinkedin):
             if sent_invitation_tab.jq.has_class(
                 element=next_button, class_name=pagination_disabled_next_button_class_name
             ):
-                sent_invitation_tab.click(next_button)
-                sent_invitation_tab.wait_for_body_tag_presence_and_visibility(wait=10)
+                break
+
+            sent_invitation_tab.click(next_button)
+            sent_invitation_tab.wait_for_body_tag_presence_and_visibility(wait=10)
 
         self.logger.info(f"Withdrew {number_of_removed_invitation} invitations")
 
@@ -435,15 +438,13 @@ class LinkedIn(AbstractBaseLinkedin):
         ):
             pagination_next_button_text = "Next"
 
-            next_button = sent_invitation_tab.jq.parent(
-                sent_invitation_tab.jq.find_elements_with_text(
-                    text=pagination_next_button_text, element=pagination, first_match=True
-                )
+            next_button = sent_invitation_tab.jq.find_elements_with_text(
+                text=pagination_next_button_text, element=pagination, first_match=True
             )
 
             pagination_disabled_next_button_class_name = "artdeco-button--disabled"
 
-            if sent_invitation_tab.jq.has_class(
+            if not sent_invitation_tab.jq.has_class(
                 element=next_button, class_name=pagination_disabled_next_button_class_name
             ):
                 sent_invitation_tab.click(next_button)
@@ -458,7 +459,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return last_week_invitations
 
-    def view_profile(self, username_or_link: str, wait=5, close_tab: bool = False):
+    def view_profile(self, username_or_link: str, wait=5, close_tab: bool = True):
         """
         Given username of the profile, it opens the user profile and waits for the given time period.
         One can close the tab or let that be until the end of the session.
@@ -475,6 +476,7 @@ class LinkedIn(AbstractBaseLinkedin):
             username_or_link if "/" in username_or_link else self.USER_PROFILE_PAGE.format(username=username)  # noqa
         )
         user_profile_tab = self.browser.open(user_profile_link)
+        user_profile_tab.wait_for_body_tag_presence_and_visibility()
         not close_tab and wait and humanized_wait(wait)
         close_tab and self.browser.close_tab(user_profile_tab)
 
@@ -493,14 +495,13 @@ class LinkedIn(AbstractBaseLinkedin):
             suggestion for suggestion in suggestions if min_mutual < suggestion["mutual_connections"] < max_mutual
         ][:max_remove]
 
-        self.logger.info(f"Filtered {len(valid_suggestions)} users recommendations based on set criteria.")
+        self.logger.info(f"Filtered {len(valid_suggestions)} users recommendations to remove based on set criteria.")
 
         for suggestion in valid_suggestions:
             remove_button = suggestion["remove_connection_button"]
 
-            recommendation_tab.click(remove_button)
-
-            humanized_wait(3)
+            if recommendation_tab.click(remove_button):
+                humanized_wait(3)
 
         self.logger.info(f"Removed {len(valid_suggestions)} recommendations")
 
@@ -590,6 +591,11 @@ class LinkedIn(AbstractBaseLinkedin):
             min(max_invitations_to_send, self.WEEKLY_MAX_INVITATION)
             or self.WEEKLY_MAX_INVITATION - self.count_invitations_sent_last_week()
         )
+
+        self.logger.info(f"Invitations sent last week: {self.count_invitations_sent_last_week()}")
+        self.logger.info(f"Max invitations to send: {max_invitations_to_send}")
+
+        self.remove_recommendations(0, min_mutual - 1, max_remove=30)
 
         self.send_invitations(
             max_invitations=max_invitations_to_send,
