@@ -1,7 +1,5 @@
 selenium==4.12.0
-PyAutoGUI==0.9.54
-
-seleniumtabs==0.4.4
+seleniumtabs
 
 django-environ
 python-dotenv

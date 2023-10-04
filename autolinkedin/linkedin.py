@@ -5,6 +5,7 @@ from seleniumtabs import Tab
 from seleniumtabs.wait import humanized_wait
 
 from autolinkedin.base_linkedin import AbstractBaseLinkedin
+from autolinkedin.decorators import login_required
 from autolinkedin.exceptions import InvalidConnection, LinkedInLoginError
 from autolinkedin.settings import getLogger
 from autolinkedin.utils.core import find_in_text, get_preferences
@@ -38,72 +39,6 @@ class LinkedIn(AbstractBaseLinkedin):
         self.__last_week_invitations: int = 0
         self.logger = getLogger(__name__)
 
-    def _convert_invitation_sent_text_to_days(self, invitation_time: str) -> int | float:
-        """Find how many days ago an invitation was sent."""
-
-        # Sent <number?> <seconds/minutes/days/months/years/today/yesterday> <ago?>
-
-        self.logger.info(f"Sent ago text: {invitation_time}")
-
-        recently_sent_units = ["second", "minute", "hour", "today", "yesterday"]
-
-        if any(r_units in invitation_time for r_units in recently_sent_units):
-            self.logger.info(f"Invitation seems to sent very recently: {invitation_time}")
-            return 1
-
-        try:
-            _, num, unit, _ = invitation_time.split()
-        except ValueError:
-            self.logger.error(f"Error in converting to days: {invitation_time}. Returning 1.")
-            return 1
-
-        num = int(num)
-
-        # TODO: need addendum for days? 1 month ago can mean 1 to 1 month 29 days ago.
-
-        factor = {
-            "day": 1,
-            "week": 7,
-            "month": 30,
-            "year": 365,
-        }
-
-        result = next(
-            (multi_factor * num for factor, multi_factor in factor.items() if factor in unit),
-            -1,
-        )
-
-        self.logger.info(f"This invitation ({invitation_time}) was sent approximately {result} days ago")
-
-        return result
-
-    def _is_user_eligible(
-        self,
-        user_details: dict,
-        preferred_users: list = None,
-        not_preferred_users: list = None,
-    ) -> bool:
-        """Know if the user is eligible (based on set preferences)
-
-        :return: True if the user matches criteria, False otherwise
-        """
-
-        matching_preference = isinstance(preferred_users, list) and find_in_text(
-            user_details["occupation"], preferred_users
-        )
-
-        matching_not_preference = (
-            not_preferred_users  # !important
-            and isinstance(not_preferred_users, list)
-            and find_in_text(user_details["occupation"], not_preferred_users)
-        )
-
-        self.logger.info(f"""User info: {user_details}""")
-        self.logger.info(f"Extracted user data: Preference matched = {matching_preference}")
-        self.logger.info(f"Extracted user data: Not-preferred matched = {matching_not_preference}")
-
-        return False if matching_not_preference else bool(matching_preference)
-
     def login(self) -> bool:
         """Try login using given credentials"""
 
@@ -129,16 +64,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return self._user_logged_in
 
-    def _attempt_login(self, login_tab):
-        username_input = login_tab.jq("#username")
-        password_input = login_tab.jq("#password")
-        submit_button = login_tab.jq("button", first_match=True)
-
-        username_input.send_keys(self.username)
-        password_input.send_keys(self.password)
-
-        login_tab.click(submit_button)
-
+    @login_required
     def get_connection_recommendations(self) -> tuple[Tab, list[dict]]:
         def convert_to_int(int_text: str):
             with suppress(Exception):
@@ -196,6 +122,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return networking_home_tab, cards
 
+    @login_required
     def get_sent_invitations(self, sent_invitation_tab: Tab = None) -> (Tab, list[dict]):
         def get_sent_time(button, tab) -> int:
             return self._convert_invitation_sent_text_to_days(
@@ -236,7 +163,7 @@ class LinkedIn(AbstractBaseLinkedin):
         preferred_users: list | os.PathLike | str = None,
         not_preferred_users: list | os.PathLike | str = None,
         remove_recommendations: bool = False,
-        close_profile_tab: bool = False,
+        close_profile_tab: bool = True,
     ) -> int:
         """Send Invitations based on set conditions.
 
@@ -314,15 +241,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return sent_invitation_count
 
-    @staticmethod
-    def _delete_not_matching_recommendations(tab: Tab, user_cards):
-        for card in user_cards:
-            remove_button = card["remove_connection_button"]
-
-            with suppress(Exception):
-                if tab.click(remove_button):
-                    humanized_wait(3)
-
+    @login_required
     def accept_invitations(self):
         invitation_card_actions = "invitation-card__action-container"
 
@@ -338,6 +257,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
             humanized_wait(3)
 
+    @login_required
     def withdraw_sent_invitations(self, older_than_days: int = 10, max_remove=20) -> int:
         """Withdraw invitations sent before this many days.
 
@@ -414,6 +334,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return number_of_removed_invitation
 
+    @login_required
     def count_invitations_sent_last_week(self, force_counting: bool = False, sent_invitation_tab: Tab = None) -> int:
         """Estimated number of invitations sent in the last week.
 
@@ -459,6 +380,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return last_week_invitations
 
+    @login_required
     def view_profile(self, username_or_link: str, wait=5, close_tab: bool = True):
         """
         Given username of the profile, it opens the user profile and waits for the given time period.
@@ -480,12 +402,17 @@ class LinkedIn(AbstractBaseLinkedin):
         not close_tab and wait and humanized_wait(wait)
         close_tab and self.browser.close_tab(user_profile_tab)
 
+    @login_required
     def remove_recommendations(self, min_mutual: int, max_mutual: int, max_remove: int = None):
         """Remove recommendations from the recommendation page.
 
         Note that it takes some time for LinkedIn to remove (and refresh) recommendations
         and removed recommendations may appear again.
         """
+
+        if min_mutual <= 1 and max_mutual <= 1:
+            self.logger.info("Removed No recommendations")
+            return 0
 
         recommendation_tab, suggestions = self.get_connection_recommendations()
 
@@ -507,6 +434,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return len(valid_suggestions)
 
+    @login_required
     def search_people(self, search_term: str, connections: int | list[int] = 2, page_number: int = 1) -> dict:
         if isinstance(connections, int):
             connections = [connections]
@@ -570,6 +498,91 @@ class LinkedIn(AbstractBaseLinkedin):
 
         return result
 
+    def _convert_invitation_sent_text_to_days(self, invitation_time: str) -> int | float:
+        """Find how many days ago an invitation was sent."""
+
+        # Sent <number?> <seconds/minutes/days/months/years/today/yesterday> <ago?>
+
+        self.logger.info(f"Sent ago text: {invitation_time}")
+
+        recently_sent_units = ["second", "minute", "hour", "today", "yesterday"]
+
+        if any(r_units in invitation_time for r_units in recently_sent_units):
+            self.logger.info(f"Invitation seems to sent very recently: {invitation_time}")
+            return 1
+
+        try:
+            _, num, unit, _ = invitation_time.split()
+        except ValueError:
+            self.logger.error(f"Error in converting to days: {invitation_time}. Returning 1.")
+            return 1
+
+        num = int(num)
+
+        # TODO: need addendum for days? 1 month ago can mean 1 to 1 month 29 days ago.
+
+        factor = {
+            "day": 1,
+            "week": 7,
+            "month": 30,
+            "year": 365,
+        }
+
+        result = next(
+            (multi_factor * num for factor, multi_factor in factor.items() if factor in unit),
+            -1,
+        )
+
+        self.logger.info(f"This invitation ({invitation_time}) was sent approximately {result} days ago")
+
+        return result
+
+    def _is_user_eligible(
+        self,
+        user_details: dict,
+        preferred_users: list = None,
+        not_preferred_users: list = None,
+    ) -> bool:
+        """Know if the user is eligible (based on set preferences)
+
+        :return: True if the user matches criteria, False otherwise
+        """
+
+        matching_preference = isinstance(preferred_users, list) and find_in_text(
+            user_details["occupation"], preferred_users
+        )
+
+        matching_not_preference = (
+            not_preferred_users  # !important
+            and isinstance(not_preferred_users, list)
+            and find_in_text(user_details["occupation"], not_preferred_users)
+        )
+
+        self.logger.info(f"""User info: {user_details}""")
+        self.logger.info(f"Extracted user data: Preference matched = {matching_preference}")
+        self.logger.info(f"Extracted user data: Not-preferred matched = {matching_not_preference}")
+
+        return False if matching_not_preference else bool(matching_preference)
+
+    @staticmethod
+    def _delete_not_matching_recommendations(tab: Tab, user_cards):
+        for card in user_cards:
+            remove_button = card["remove_connection_button"]
+
+            with suppress(Exception):
+                if tab.click(remove_button):
+                    humanized_wait(3)
+
+    def _attempt_login(self, login_tab):
+        username_input = login_tab.jq("#username")
+        password_input = login_tab.jq("#password")
+        submit_button = login_tab.jq("button", first_match=True)
+
+        username_input.send_keys(self.username)
+        password_input.send_keys(self.password)
+
+        login_tab.click(submit_button)
+
     def smart_follow_unfollow(
         self,
         min_mutual: int = 0,
@@ -580,10 +593,10 @@ class LinkedIn(AbstractBaseLinkedin):
         max_invitations_to_send: int = 0,
         remove_recommendations: bool = True,
     ):
+        """Consolidation of important methods of the class"""
+
         users_preferred = get_preferences(users_preferred)
         users_not_preferred = get_preferences(users_not_preferred)
-
-        self.login()
 
         self.withdraw_sent_invitations(older_than_days=withdraw_invite_older_than_days)
 

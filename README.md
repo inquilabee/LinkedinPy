@@ -12,7 +12,6 @@ Elevate your LinkedIn game with **AutoLinkedIn**, a Python package designed for 
 - **Background Mode**: Run all tasks in the background mode without interfering with your regular work.
 - **Search**: Search for people.
 
-**Note**: **AutoLinkedIn** has been tested on macOS and is expected to work on Linux/Unix environments as well. If you encounter any issues while running the scripts, feel free to raise an issue or submit a pull request.
 
 ### Getting Started
 
@@ -37,8 +36,7 @@ with LinkedIn(
         headless="<True/False>",
 ) as ln:
     # Perform LinkedIn actions here
-    ln.login()
-    ln.remove_sent_invitations(older_than_days=14)
+    ln.withdraw_sent_invitations(older_than_days=14)
     last_week_invitations = ln.count_invitations_sent_last_week()
 
     ln.send_invitations(
@@ -49,8 +47,6 @@ with LinkedIn(
         not_preferred_users=["Sportsman", "Doctor"],  # file_path or list of features
         view_profile=True,  # (recommended) view profile of users you sent connection requests to
     )
-
-    ln.withdraw_sent_invitations(older_than_days=14)
 
     ln.accept_invitations()
 
