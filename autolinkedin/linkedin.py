@@ -65,7 +65,7 @@ class LinkedIn(AbstractBaseLinkedin):
         return self._user_logged_in
 
     @login_required
-    def get_connection_recommendations(self) -> tuple[Tab, list[dict]]:
+    def get_connection_recommendations(self, tab: Tab = None) -> tuple[Tab, list[dict]]:
         def convert_to_int(int_text: str):
             with suppress(Exception):
                 return int(int_text)
@@ -79,7 +79,7 @@ class LinkedIn(AbstractBaseLinkedin):
 
         scroll_times_on_recommendation_page = 20
 
-        networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
+        networking_home_tab = tab or self.browser.open(self.NETWORK_HOME_PAGE)
         networking_home_tab.wait_for_body_tag_presence_and_visibility(wait=5)
 
         networking_home_tab.scroll(times=scroll_times_on_recommendation_page)
@@ -191,11 +191,14 @@ class LinkedIn(AbstractBaseLinkedin):
 
         sent_invitation_count, retry_times = 0, 5
 
+        networking_home_tab = self.browser.open(self.NETWORK_HOME_PAGE)
+
         for _ in range(retry_times):
             if sent_invitation_count >= max_invitations:
                 break
 
-            networking_home_tab, user_cards = self.get_connection_recommendations()
+            networking_home_tab.refresh()
+            networking_home_tab, user_cards = self.get_connection_recommendations(networking_home_tab)
 
             self.logger.info(f"Found a total of {len(user_cards)} connection recommendations.")
 

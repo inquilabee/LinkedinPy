@@ -29,7 +29,7 @@ skip_glob = []
 
 [tool.poetry]
 name = "autolinkedin"
-version = "1.6.2"
+version = "1.6.4"
 packages = [
     { include = "autolinkedin" },
 ]
@@ -47,7 +47,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.10"
 selenium = "^4.12.0"
-seleniumtabs = "^0.5.2"
+seleniumtabs = "^0.5.4"
 django-environ = "^0.11.1"
 python-dotenv = "^1.0.0"
 PyYAML = "^6.0.1"
