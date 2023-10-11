@@ -1349,6 +1349,21 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
+name = "requests-file"
+version = "1.5.1"
+description = "File transport adapter for Requests"
+optional = false
+python-versions = "*"
+files = [
+    {file = "requests-file-1.5.1.tar.gz", hash = "sha256:07d74208d3389d01c38ab89ef403af0cfec63957d53a0081d8eca738d0247d8e"},
+    {file = "requests_file-1.5.1-py2.py3-none-any.whl", hash = "sha256:dfe5dae75c12481f68ba353183c53a65e6044c923e64c24b2209f6c7570ca953"},
+]
+
+[package.dependencies]
+requests = ">=1.0.0"
+six = "*"
+
+[[package]]
 name = "requests-toolbelt"
 version = "1.0.0"
 description = "A utility belt for advanced users of python-requests"
@@ -1396,13 +1411,13 @@ urllib3 = {version = ">=1.26,<3", extras = ["socks"]}
 
 [[package]]
 name = "seleniumtabs"
-version = "0.5.4"
+version = "0.5.6"
 description = "Selenium with tab management in Python"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "seleniumtabs-0.5.4-py3-none-any.whl", hash = "sha256:6b8c320ff633aa55e5ac3a46fb5140895f07541a1683deda5223525008c0eada"},
-    {file = "seleniumtabs-0.5.4.tar.gz", hash = "sha256:ee7634e581b623592d80733c1fec85193a11bdd9e356481039f8fbd7492a41b8"},
+    {file = "seleniumtabs-0.5.6-py3-none-any.whl", hash = "sha256:b470f3c898cc2e3036a7c00f9ef63513c9254e9c6eed9fd02f59a166ac75290d"},
+    {file = "seleniumtabs-0.5.6.tar.gz", hash = "sha256:612a54098a6aeef0326c628795996b87941de3879915e63494197f54b4578865"},
 ]
 
 [package.dependencies]
@@ -1413,6 +1428,7 @@ pyquery = ">=2.0.0,<3.0.0"
 python-dotenv = ">=1.0.0,<2.0.0"
 PyYAML = ">=6.0.1,<7.0.0"
 selenium = ">=4.12.0,<5.0.0"
+tldextract = ">=3.6.0,<4.0.0"
 webdriver-manager = "4.0.0"
 
 [[package]]
@@ -1458,6 +1474,23 @@ files = [
     {file = "sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0"},
     {file = "sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88"},
 ]
+
+[[package]]
+name = "tldextract"
+version = "3.6.0"
+description = "Accurately separates a URL's subdomain, domain, and public suffix, using the Public Suffix List (PSL). By default, this includes the public ICANN TLDs and their exceptions. You can optionally support the Public Suffix List's private domains as well."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "tldextract-3.6.0-py3-none-any.whl", hash = "sha256:30a492de80f4de215aa998588ba5c2e625ee74ace3a2705cfb52b0021053bcbe"},
+    {file = "tldextract-3.6.0.tar.gz", hash = "sha256:a5d8b6583791daca268a7592ebcf764152fa49617983c49916ee9de99b366222"},
+]
+
+[package.dependencies]
+filelock = ">=3.0.8"
+idna = "*"
+requests = ">=2.1.0"
+requests-file = ">=1.4"
 
 [[package]]
 name = "toml"
@@ -1747,4 +1780,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2861bca366b7a40d05933549a0992e9872b0f98e7d4e1ffb585ba81b95dd610b"
+content-hash = "deeed262f46638ccfe2c39873c39494b3acd62f157ba5251992adb294d8de898"

@@ -2,13 +2,13 @@ import os
 from contextlib import suppress
 
 from seleniumtabs import Tab
-from seleniumtabs.wait import humanized_wait
 
 from autolinkedin.base_linkedin import AbstractBaseLinkedin
 from autolinkedin.decorators import login_required
 from autolinkedin.exceptions import InvalidConnection, LinkedInLoginError
 from autolinkedin.settings import getLogger
 from autolinkedin.utils.core import find_in_text, get_preferences
+from autolinkedin.wait import humanized_wait
 
 
 class LinkedIn(AbstractBaseLinkedin):
